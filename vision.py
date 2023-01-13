@@ -183,7 +183,7 @@ def annotate_image(
     pass
 
 
-def is_goal_in_image(frame: np.ndarray, robot_pose: Pose2d, goal_point: Transform3d 3d):
+def is_goal_in_image(frame: np.ndarray, robot_pose: Pose2d, goal_point: Transform3d):
 
     # Check the robot is facing the right direction for the point
     if not robot_is_facing_goal(robot_pose):
@@ -197,10 +197,10 @@ def is_goal_in_image(frame: np.ndarray, robot_pose: Pose2d, goal_point: Transfor
     # point_camera_frame = inv(robot_pose * robot_to_cam)) * point
 
     # Project point into pixel space
-    x_p,y_p = project_point_to_image_frame(point_camera_frame, CAMERA_MATRIX)
+    x_p, y_p = project_point_to_image_frame(point_camera_frame, CAMERA_MATRIX)
 
-    u = x_p + len(frame[0])/2
-    v = -y_p + len(frame[1])/2
+    u = x_p + len(frame[0]) / 2
+    v = -y_p + len(frame[1]) / 2
 
     # check pixel is within the bounds of the frame
     return (u > 0) and (u < FRAME_WIDTH) and (v > 0) and (v < FRAME_HEIGHT)
@@ -213,10 +213,12 @@ def robot_is_facing_goal(robot_pose: Pose2d) -> bool:
     )
 
 
-def project_point_to_image_frame(point: Translation3d, camera_matrix: np.ndarray) -> Tuple(int, int):
-    u = (point.x * camera_matrix[0][0])/point.z + camera_matrix[0][2]
-    v = (point.y * camera_matrix[1][1]/point.z) + camera_matrix[1][2]
-    return u,v
+def project_point_to_image_frame(
+    point: Translation3d, camera_matrix: np.ndarray
+) -> Tuple(int, int):
+    u = (point.x * camera_matrix[0][0]) / point.z + camera_matrix[0][2]
+    v = (point.y * camera_matrix[1][1] / point.z) + camera_matrix[1][2]
+    return u, v
 
 
 if __name__ == "__main__":
