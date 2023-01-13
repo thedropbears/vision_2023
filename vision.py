@@ -18,7 +18,8 @@ from helper_types import (
     BoundingBox,
 )
 from goal_map import GoalMap
-from wpimath.geometry import Pose2d, Pose3d
+from wpimath.geometry import Pose2d, Pose3d, Translation3d, Transform3d
+import sys
 
 
 class Vision:
@@ -180,6 +181,42 @@ def annotate_image(
         np.ndarray: frame annotated with observed goal regions
     """
     pass
+
+
+def is_goal_in_image(frame: np.ndarray, robot_pose: Pose2d, goal_point: Transform3d 3d):
+
+    # Check the robot is facing the right direction for the point
+    if not robot_is_facing_goal(robot_pose):
+        return False
+
+    # transform to make camera origin
+    # TODO Finish this section
+    # goal_point = is in world frame
+    # robot_pose = world to_robot
+    # robot_to_cam = robot_to cam
+    # point_camera_frame = inv(robot_pose * robot_to_cam)) * point
+
+    # Project point into pixel space
+    x_p,y_p = project_point_to_image_frame(point_camera_frame, CAMERA_MATRIX)
+
+    u = x_p + len(frame[0])/2
+    v = -y_p + len(frame[1])/2
+
+    # check pixel is within the bounds of the frame
+    return (u > 0) and (u < FRAME_WIDTH) and (v > 0) and (v < FRAME_HEIGHT)
+
+
+def robot_is_facing_goal(robot_pose: Pose2d) -> bool:
+    return (
+        robot_pose.rotation() > DIRECTION_GATE_ANGLE
+        or robot_pose.rotation() < -DIRECTION_GATE_ANGLE
+    )
+
+
+def project_point_to_image_frame(point: Translation3d, camera_matrix: np.ndarray) -> Tuple(int, int):
+    u = (point.x * camera_matrix[0][0])/point.z + camera_matrix[0][2]
+    v = (point.y * camera_matrix[1][1]/point.z) + camera_matrix[1][2]
+    return u,v
 
 
 if __name__ == "__main__":
