@@ -190,14 +190,14 @@ def is_goal_in_image(frame: np.ndarray, robot_pose: Pose2d, goal_point: Transfor
         return False
 
     # transform to make camera origin
-    # TODO Finish this section
-    # goal_point = is in world frame
-    # robot_pose = world to_robot
-    # robot_to_cam = robot_to cam
-    # point_camera_frame = inv(robot_pose * robot_to_cam)) * point
+    world_to_robot = Transform3d(Pose3d(), Pose3d(robot_pose))
+    world_to_camera = world_to_robot * ROBOT_BASE_TO_CAMERA_TRANSFORMATION
+    point_camera_frame = world_to_camera.inverse() * goal_point
 
     # Project point into pixel space
-    x_p, y_p = project_point_to_image_frame(point_camera_frame, CAMERA_MATRIX)
+    x_p, y_p = project_point_to_image_frame(
+        point_camera_frame.translation(), CAMERA_MATRIX
+    )
 
     u = x_p + len(frame[0]) / 2
     v = -y_p + len(frame[1]) / 2
