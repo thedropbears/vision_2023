@@ -12,8 +12,8 @@ def read_test_data_csv(fname: str):
             result.append(
                 (
                     image,
-                    bool(cone_present),
-                    bool(cube_present),
+                    cone_present == "True",
+                    cube_present == "True",
                     int(x1),
                     int(y1),
                     int(x2),
