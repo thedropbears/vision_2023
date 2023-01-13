@@ -1,0 +1,10 @@
+# same version thats running on pi
+# https://github.com/wpilibsuite/WPILibPi/blob/36788aae0bdaaee27a540357d111f4adf07b3973/stage3/01-sys-tweaks/01-run.sh#L49
+# opencv install numpy as a dependancy
+opencv-python
+pytest
+pynetworktables
+paramiko
+scp
+robotpy-wpimath
+robotpy-cscore
