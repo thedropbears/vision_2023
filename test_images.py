@@ -26,7 +26,7 @@ def read_test_data_csv(fname: str):
 images = read_test_data_csv("test/expected.csv")
 
 
-@pytest.mark.parametrize("filename,cone_present,cube_present,x1,x2,y1,y2", images)
+@pytest.mark.parametrize("filename,cone_present,cube_present,x1,y1,x2,y2", images)
 def test_sample_images(
     filename: str,
     cone_present: bool,
