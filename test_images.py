@@ -42,40 +42,36 @@ def test_sample_images(
     if cone_present:
         assert (
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CONE)
-            == True
-        )
+            == True), "Cone present in image but not found by detector"
+        
         assert (
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CUBE)
-            == False
-        )
+            == False), "Cone present in image but detector found cube"
+        
         assert (
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.BOTH)
-            == True
-        )
+            == True), "Cone present in image but detector found neither"
+        
 
     if cube_present:
         assert (
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CUBE)
-            == True
-        )
+            == True), "Cube present in image but not found by detector"
+        
         assert (
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CONE)
-            == False
-        )
+            == False), "Cube present in image but detector found cube"
+        
         assert (
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.BOTH)
-            == True
-        )
+            == True), "Cube present in image but detector found neither"
+        
     if not cube_present and not cone_present:
         assert (
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CUBE)
-            == False
-        )
+            == False), "Nothing present in image but detector found cube"
+        
         assert (
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CONE)
-            == False
-        )
-        assert (
-            vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.BOTH)
-            == False
-        )
+            == False), "Nothing present in image but detector found cone"
+        
