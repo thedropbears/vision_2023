@@ -1,6 +1,6 @@
 from camera_manager import CameraManager
 from connection import NTConnection
-import magic_numbers
+from magic_numbers import *
 from typing import Tuple, Optional, List
 from math import tan
 import cv2
@@ -56,7 +56,7 @@ def is_coloured_game_piece(masked_image: np.ndarray, lower_colour: np.ndarray, u
         #cv2.imshow('Detected contours', with_contours)
         # get area of contour
         area = cv2.contourArea(biggest_contour)
-        if area/bBox_area>0.1:
+        if area/bBox_area>CONTOUR_TO_BOUNDING_BOX_AREA_RATIO_THRESHOLD:
             return True
         else:
             return False
@@ -85,15 +85,15 @@ def is_game_piece_present(
     cone_present = False
     if expected_game_piece == ExpectedGamePiece.BOTH or expected_game_piece == ExpectedGamePiece.CUBE:
         # run vube mask
-        lower_purple = np.array([(160/240)*180,(99/240)*255,(59/240)*255])
-        upper_purple = np.array([(185/240)*180,(240/240)*255,(225/240)*255])
+        lower_purple = CUBE_HSV_LOW
+        upper_purple = CUBE_HSV_HIGH
         cube_present = is_coloured_game_piece(hsv, lower_purple,upper_purple, bounding_box.area())
 
 
     if expected_game_piece == ExpectedGamePiece.BOTH or expected_game_piece == ExpectedGamePiece.CONE:
         # run cone mask
-        lower_yellow = np.array([(28/240)*180,(118/240)*255,(107/240)*255])
-        upper_yellow = np.array([(35/240)*180,(240/240)*255,(220/240)*255])
+        lower_yellow = CONE_HSV_LOW
+        upper_yellow = CONE_HSV_HIGH
 
         cone_present = is_coloured_game_piece(hsv, lower_yellow,upper_yellow, bounding_box.area())
         
