@@ -25,3 +25,5 @@ ROBOT_BASE_TO_CAMERA_TRANSFORMATION = Transform3d(
 )
 
 CAMERA_MATRIX = np.array((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
+
+BOUNDING_BOX_SIZE = 20

@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 from helper_types import (
     GoalRegionObservation,
-    GoalState,
+    GoalRegion,
     ExpectedGamePiece,
     BoundingBox,
 )
@@ -183,27 +183,62 @@ def annotate_image(
     pass
 
 
-def is_goal_in_image(frame: np.ndarray, robot_pose: Pose2d, goal_point: Transform3d):
+def get_goals_in_image(
+    frame: np.ndarray,
+    robot_pose: Pose2d,
+    robot_to_camera: Transform3d,
+    goal_regions: List[GoalRegion],
+) -> List[GoalRegionObservation]:
+
+    goals_in_image = []
 
     # Check the robot is facing the right direction for the point
     if not robot_is_facing_goal(robot_pose):
-        return False
+        return goals_in_image
 
-    # transform to make camera origin
+    # create transform to make camera origin
     world_to_robot = Transform3d(Pose3d(), Pose3d(robot_pose))
-    world_to_camera = world_to_robot * ROBOT_BASE_TO_CAMERA_TRANSFORMATION
-    point_camera_frame = world_to_camera.inverse() * goal_point
+    world_to_camera = world_to_robot + robot_to_camera
 
-    # Project point into pixel space
-    x_p, y_p = project_point_to_image_frame(
-        point_camera_frame.translation(), CAMERA_MATRIX
+    # extract translation and rotation for use in open-cv api
+    t_vec = np.array(list(world_to_camera.translation()))
+    r_vec = np.array(list(world_to_camera.rotation()))
+
+    # extract list of goal points for use in opencv api
+    goal_points = np.array()
+    goal_points_camera_frame = np.array()
+    np.append(
+        goal_points,
+        (
+            np.array(list(goal_region.position.translation()))
+            for goal_region in goal_regions
+        ),
     )
 
-    u = x_p + len(frame[0]) / 2
-    v = -y_p + len(frame[1]) / 2
+    # Project point into pixel space
+    cv2.projectPoints(
+        goal_points, r_vec, t_vec, CAMERA_MATRIX, imagePoints=goal_points_camera_frame
+    )
+
+    # check image boundaries to determine which goals are actually in the image
+    for goal_point, goal_region in zip(goal_points_camera_frame, goal_regions):
+        if (
+            (goal_point[0] > 0)
+            and (goal_point[0] < len(frame[0]))
+            and (goal_point[1] > 0)
+            and (goal_point[1] < len(frame[1]))
+        ):
+            # Create bounding box for discovered goal
+            x1 = goal_point[0] - BOUNDING_BOX_SIZE / 2
+            x2 = goal_point[0] + BOUNDING_BOX_SIZE / 2
+            y1 = goal_point[1] - BOUNDING_BOX_SIZE / 2
+            y2 = goal_point[1] + BOUNDING_BOX_SIZE / 2
+
+            b_box = BoundingBox(x1, y1, x2, y2)
+            goals_in_image.append(GoalRegionObservation(b_box, goal_region))
 
     # check pixel is within the bounds of the frame
-    return (u > 0) and (u < FRAME_WIDTH) and (v > 0) and (v < FRAME_HEIGHT)
+    return goals_in_image
 
 
 def robot_is_facing_goal(robot_pose: Pose2d) -> bool:
@@ -211,14 +246,6 @@ def robot_is_facing_goal(robot_pose: Pose2d) -> bool:
         robot_pose.rotation() > DIRECTION_GATE_ANGLE
         or robot_pose.rotation() < -DIRECTION_GATE_ANGLE
     )
-
-
-def project_point_to_image_frame(
-    point: Translation3d, camera_matrix: np.ndarray
-) -> Tuple(int, int):
-    u = (point.x * camera_matrix[0][0]) / point.z + camera_matrix[0][2]
-    v = (point.y * camera_matrix[1][1] / point.z) + camera_matrix[1][2]
-    return u, v
 
 
 if __name__ == "__main__":
