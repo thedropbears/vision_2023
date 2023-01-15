@@ -61,7 +61,6 @@ def is_coloured_game_piece(
     if len(contours) > 0:
         # find largest contour in mask, use to compute minEnCircle
         biggest_contour = max(contours, key=cv2.contourArea)
-        # cv2.imshow('Detected contours', with_contours)
         # get area of contour
         area = cv2.contourArea(biggest_contour)
         if area / bBox_area > CONTOUR_TO_BOUNDING_BOX_AREA_RATIO_THRESHOLD:
@@ -78,9 +77,6 @@ def is_game_piece_present(
 ) -> bool:
 
     # draw bound box mask
-    # calculate bounding box area
-    # start_point = (512,360) #top left corner of rectangle
-    # end_point = (740,503) #bottom right corner of rectangle
     bBox_mask = np.zeros_like(frame)
     bBox_mask = cv2.rectangle(
         bBox_mask,
@@ -99,7 +95,7 @@ def is_game_piece_present(
         expected_game_piece == ExpectedGamePiece.BOTH
         or expected_game_piece == ExpectedGamePiece.CUBE
     ):
-        # run vube mask
+        # run cube mask
         lower_purple = CUBE_HSV_LOW
         upper_purple = CUBE_HSV_HIGH
         cube_present = is_coloured_game_piece(
