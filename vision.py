@@ -44,23 +44,30 @@ class Vision:
         self.camera_manager.send_frame(display)
         self.connection.set_fps()
 
-def is_coloured_game_piece(masked_image: np.ndarray, lower_colour: np.ndarray, upper_colour: np.ndarray, bBox_area: int)->bool:
-  
+
+def is_coloured_game_piece(
+    masked_image: np.ndarray,
+    lower_colour: np.ndarray,
+    upper_colour: np.ndarray,
+    bBox_area: int,
+) -> bool:
+
     gamepiece_mask = cv2.inRange(masked_image, lower_colour, upper_colour)
 
     # get largest contour
-    contours, hierarchy = cv2.findContours(gamepiece_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    if len(contours) >0:
-    #find largest contour in mask, use to compute minEnCircle 
-        biggest_contour = max(contours, key = cv2.contourArea)
-        #cv2.imshow('Detected contours', with_contours)
+    contours, hierarchy = cv2.findContours(
+        gamepiece_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
+    )
+    if len(contours) > 0:
+        # find largest contour in mask, use to compute minEnCircle
+        biggest_contour = max(contours, key=cv2.contourArea)
+        # cv2.imshow('Detected contours', with_contours)
         # get area of contour
         area = cv2.contourArea(biggest_contour)
-        if area/bBox_area>CONTOUR_TO_BOUNDING_BOX_AREA_RATIO_THRESHOLD:
+        if area / bBox_area > CONTOUR_TO_BOUNDING_BOX_AREA_RATIO_THRESHOLD:
             return True
         else:
             return False
-
 
     else:
         return False
@@ -72,35 +79,46 @@ def is_game_piece_present(
 
     # draw bound box mask
     # calculate bounding box area
-    #start_point = (512,360) #top left corner of rectangle
-    #end_point = (740,503) #bottom right corner of rectangle
+    # start_point = (512,360) #top left corner of rectangle
+    # end_point = (740,503) #bottom right corner of rectangle
     bBox_mask = np.zeros_like(frame)
-    bBox_mask = cv2.rectangle(bBox_mask, (bounding_box.x1,bounding_box.y1),(bounding_box.x2,bounding_box.y2),(255,255,255), cv2.FILLED)
+    bBox_mask = cv2.rectangle(
+        bBox_mask,
+        (bounding_box.x1, bounding_box.y1),
+        (bounding_box.x2, bounding_box.y2),
+        (255, 255, 255),
+        cv2.FILLED,
+    )
 
     masked_image = cv2.bitwise_and(frame, bBox_mask)
-
 
     hsv = cv2.cvtColor(masked_image, cv2.COLOR_BGR2HSV)
     cube_present = False
     cone_present = False
-    if expected_game_piece == ExpectedGamePiece.BOTH or expected_game_piece == ExpectedGamePiece.CUBE:
+    if (
+        expected_game_piece == ExpectedGamePiece.BOTH
+        or expected_game_piece == ExpectedGamePiece.CUBE
+    ):
         # run vube mask
         lower_purple = CUBE_HSV_LOW
         upper_purple = CUBE_HSV_HIGH
-        cube_present = is_coloured_game_piece(hsv, lower_purple,upper_purple, bounding_box.area())
+        cube_present = is_coloured_game_piece(
+            hsv, lower_purple, upper_purple, bounding_box.area()
+        )
 
-
-    if expected_game_piece == ExpectedGamePiece.BOTH or expected_game_piece == ExpectedGamePiece.CONE:
+    if (
+        expected_game_piece == ExpectedGamePiece.BOTH
+        or expected_game_piece == ExpectedGamePiece.CONE
+    ):
         # run cone mask
         lower_yellow = CONE_HSV_LOW
         upper_yellow = CONE_HSV_HIGH
 
-        cone_present = is_coloured_game_piece(hsv, lower_yellow,upper_yellow, bounding_box.area())
-        
+        cone_present = is_coloured_game_piece(
+            hsv, lower_yellow, upper_yellow, bounding_box.area()
+        )
+
     return cone_present or cube_present
-
-
-   
 
 
 def process_image(frame: np.ndarray, pose: Pose2d):
