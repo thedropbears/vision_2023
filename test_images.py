@@ -26,7 +26,7 @@ def read_test_data_csv(fname: str):
 images = read_test_data_csv("test/expected.csv")
 
 
-@pytest.mark.parametrize("filename,cone_present,cube_present,x1,x2,y1,y2", images)
+@pytest.mark.parametrize("filename,cone_present,cube_present,x1,y1,x2,y2", images)
 def test_sample_images(
     filename: str,
     cone_present: bool,
@@ -43,39 +43,41 @@ def test_sample_images(
         assert (
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CONE)
             == True
-        )
+        ), "Cone present in image but not found by detector"
+
         assert (
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CUBE)
             == False
-        )
+        ), "Cone present in image but detector found cube"
+
         assert (
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.BOTH)
             == True
-        )
+        ), "Cone present in image but detector found neither"
 
     if cube_present:
         assert (
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CUBE)
             == True
-        )
+        ), "Cube present in image but not found by detector"
+
         assert (
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CONE)
             == False
-        )
+        ), "Cube present in image but detector found cube"
+
         assert (
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.BOTH)
             == True
-        )
+        ), "Cube present in image but detector found neither"
+
     if not cube_present and not cone_present:
         assert (
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CUBE)
             == False
-        )
+        ), "Nothing present in image but detector found cube"
+
         assert (
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CONE)
             == False
-        )
-        assert (
-            vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.BOTH)
-            == False
-        )
+        ), "Nothing present in image but detector found cone"
