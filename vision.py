@@ -1,4 +1,4 @@
-from camera_manager import CameraManager, CameraParams
+from camera_manager import CameraManager
 from connection import NTConnection
 from magic_numbers import (
     CONTOUR_TO_BOUNDING_BOX_AREA_RATIO_THRESHOLD,
@@ -10,8 +10,7 @@ from magic_numbers import (
     FRAME_HEIGHT,
 )
 
-from typing import Tuple, Optional, List
-from math import tan, atan2
+from math import atan2
 import cv2
 import numpy as np
 from helper_types import (
@@ -24,7 +23,6 @@ from helper_types import (
 from camera_config import CameraParams
 from goal_map import GoalMap
 from wpimath.geometry import Pose2d, Pose3d, Translation3d, Transform3d
-import sys
 
 
 class Vision:
@@ -172,8 +170,8 @@ def detect_goal_state(
 
 def annotate_image(
     frame: np.ndarray,
-    map: List[GoalRegionState],
-    goal_observations: List[GoalRegionObservation],
+    map: list[GoalRegionState],
+    goal_observations: list[GoalRegionObservation],
 ) -> np.ndarray:
     """annotate a frame with projected goal points
 

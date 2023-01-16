@@ -4,7 +4,6 @@ from helper_types import (
     GoalRegion,
     ExpectedGamePiece,
 )
-from typing import List
 from wpimath.geometry import Translation3d
 
 
@@ -14,18 +13,18 @@ class GoalRegionMap:
     INTAKE_ZONE_OFFSET: float = 0.0
     Y_DISTANCE_BETWEEN_GOALS: float = 558.0
 
-    Z_DISTANCE_CUBE_LOOK_UP: List[float] = [1169.988, 865.188, 0.0]
-    Z_DISTANCE_CONE_LOOK_UP: List[float] = [
+    Z_DISTANCE_CUBE_LOOK_UP: list[float] = [1169.988, 865.188, 0.0]
+    Z_DISTANCE_CONE_LOOK_UP: list[float] = [
         826.326 + 120.0,
         522.288 + 120.0,
         0.0 + 120.0,
     ]
 
-    X_DISTANCE_CUBE_LOOK_UP: List[float] = [353.22, 796.777, 1197.227]
-    X_DISTANCE_CONE_LOOK_UP: List[float] = [364.231, 795.231, 1167.655]
+    X_DISTANCE_CUBE_LOOK_UP: list[float] = [353.22, 796.777, 1197.227]
+    X_DISTANCE_CONE_LOOK_UP: list[float] = [364.231, 795.231, 1167.655]
 
     def __init__(self, on_blue_alliance: bool):
-        self.map: List[GoalRegionState] = []
+        self.map: list[GoalRegionState] = []
 
         # This will start from the top row of goals
         for row in range(3):
@@ -60,5 +59,5 @@ class GoalRegionMap:
     def update(self, goal_observations: list[GoalRegionObservation]):
         pass
 
-    def get_state(self) -> List[GoalRegionState]:
+    def get_state(self) -> list[GoalRegionState]:
         return self.map
