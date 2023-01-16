@@ -6,3 +6,4 @@ opencv-python
 pytest
 pynetworktables
 robotpy-cscore
+robotpy-wpimath
