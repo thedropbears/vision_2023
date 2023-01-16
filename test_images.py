@@ -5,6 +5,7 @@ import vision
 from helper_types import BoundingBox, ExpectedGamePiece
 from goal_map import GoalRegionMap
 from wpimath.geometry import Pose2d
+import numpy as np
 
 
 def read_test_data_csv(fname: str):
@@ -129,6 +130,8 @@ def test_segmentation_images(
     goal_region = goal_region_map.get_state()[goal_region_id].goal_region
 
     robot_pose = Pose2d(robot_x, robot_y, heading)
+
+    camera_matrix = np.array([1, 0, 0], [0, 1, 0], [0, 0, 1])
 
     assert (
         vision.is_goal_region_in_image(image, robot_pose, camera_matrix, goal_region)

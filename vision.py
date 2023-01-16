@@ -22,7 +22,7 @@ from helper_types import (
 )
 from camera_config import CameraParams
 from goal_map import GoalMap
-from wpimath.geometry import Pose2d, Pose3d, Translation3d, Transform3d
+from wpimath.geometry import Pose2d, Pose3d, Translation3d, Transform3d, Rotation3d
 
 
 class Vision:
