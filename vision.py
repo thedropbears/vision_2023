@@ -1,4 +1,4 @@
-from camera_manager import CameraManager
+from camera_manager import CameraManager, CameraParams
 from connection import NTConnection
 from magic_numbers import *
 from typing import Tuple, Optional, List
@@ -13,7 +13,7 @@ from helper_types import (
     BoundingBox,
 )
 from goal_map import GoalMap
-from wpimath.geometry import Pose2d
+from wpimath.geometry import Pose2d, Pose3d
 import sys
 
 
@@ -184,14 +184,14 @@ def annotate_image(
 if __name__ == "__main__":
     # this is to run on the robot
     # to run vision code on your laptop use sim.py
+    K = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]) #To update
+    
+    params = CameraParams("Camera", FRAME_WIDTH, FRAME_HEIGHT, Pose3d(),  K, 30)
 
     vision = Vision(
         CameraManager(
-            "Camera",
             "/dev/video0",
-            FRAME_HEIGHT,
-            FRAME_WIDTH,
-            30,
+            params,
             "kYUYV",
         ),
         NTConnection(),

@@ -31,3 +31,6 @@ class GoalState:
     actual_id: int
     allowable_game_pieces: ExpectedGamePiece
     occupied: bool
+    
+    
+

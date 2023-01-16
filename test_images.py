@@ -81,3 +81,5 @@ def test_sample_images(
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CONE)
             == False
         ), "Nothing present in image but detector found cone"
+
+
