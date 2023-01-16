@@ -1,11 +1,8 @@
 from camera_manager import CameraManager, CameraParams
 from connection import NTConnection
 from magic_numbers import *
-from typing import Tuple, Optional, List
-from math import tan
 import cv2
 import numpy as np
-import time
 from helper_types import (
     GoalRegionObservation,
     GoalState,
@@ -14,7 +11,6 @@ from helper_types import (
 )
 from goal_map import GoalMap
 from wpimath.geometry import Pose2d, Pose3d
-import sys
 
 
 class Vision:
@@ -63,10 +59,7 @@ def is_coloured_game_piece(
         biggest_contour = max(contours, key=cv2.contourArea)
         # get area of contour
         area = cv2.contourArea(biggest_contour)
-        if area / bBox_area > CONTOUR_TO_BOUNDING_BOX_AREA_RATIO_THRESHOLD:
-            return True
-        else:
-            return False
+        return area / bBox_area > CONTOUR_TO_BOUNDING_BOX_AREA_RATIO_THRESHOLD
 
     else:
         return False
@@ -135,7 +128,7 @@ def process_image(frame: np.ndarray, pose: Pose2d):
     return
 
 
-def find_visible_goals(frame: np.ndarray, pose: Pose2d) -> List[GoalRegionObservation]:
+def find_visible_goals(frame: np.ndarray, pose: Pose2d) -> list[GoalRegionObservation]:
     """Segment image to find visible goals in a frame
 
     Args:
@@ -149,8 +142,8 @@ def find_visible_goals(frame: np.ndarray, pose: Pose2d) -> List[GoalRegionObserv
 
 
 def detect_goal_state(
-    frame: np.ndarray, regions_of_interest: List[GoalRegionObservation]
-) -> List[GoalRegionObservation]:
+    frame: np.ndarray, regions_of_interest: list[GoalRegionObservation]
+) -> list[GoalRegionObservation]:
     """Detect goal occupancy in a set of observed goal regions
 
     Args:
@@ -165,8 +158,8 @@ def detect_goal_state(
 
 def annotate_image(
     frame: np.ndarray,
-    map: List[GoalState],
-    goal_observations: List[GoalRegionObservation],
+    map: list[GoalState],
+    goal_observations: list[GoalRegionObservation],
 ) -> np.ndarray:
     """annotate a frame with projected goal points
 
@@ -184,9 +177,9 @@ def annotate_image(
 if __name__ == "__main__":
     # this is to run on the robot
     # to run vision code on your laptop use sim.py
-    K = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]) #To update
-    
-    params = CameraParams("Camera", FRAME_WIDTH, FRAME_HEIGHT, Pose3d(),  K, 30)
+    K = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])  # To update
+
+    params = CameraParams("Camera", FRAME_WIDTH, FRAME_HEIGHT, Pose3d(), K, 30)
 
     vision = Vision(
         CameraManager(

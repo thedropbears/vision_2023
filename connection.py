@@ -1,7 +1,6 @@
 import time
 
 from networktables import NetworkTablesInstance
-from typing import Tuple
 
 NetworkTables = NetworkTablesInstance.getDefault()
 
@@ -9,7 +8,7 @@ RIO_IP = "10.47.74.2"
 UDP_RECV_PORT = 5005
 UDP_SEND_PORT = 5006
 
-Results = Tuple[float, float, float]
+Results = tuple[float, float, float]
 
 
 class NTConnection:

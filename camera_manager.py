@@ -1,10 +1,7 @@
 import numpy as np
 import cv2
-from typing import Tuple
 from camera_config import CameraParams
 import sys
-
-    
 
 
 class CameraManager:
@@ -16,7 +13,7 @@ class CameraManager:
     ) -> None:
         """Initialises a Camera Manager
 
-        Args:            
+        Args:
             path: The path of the camera (can be id, path, or /dev/video)
             params: Specific parameters for the camera including intrinsics, image dimensions etc...
             pixel_format: The video's pixel format (kYUYV, kMJPEG, etc)
@@ -27,7 +24,10 @@ class CameraManager:
 
         self.camera = self.cs.startAutomaticCapture(name=params.name, path=path)
         self.camera.setVideoMode(
-            getattr(VideoMode.PixelFormat, pixel_format), params.width, params.height, params.fps
+            getattr(VideoMode.PixelFormat, pixel_format),
+            params.width,
+            params.height,
+            params.fps,
         )
 
         # In this, source and sink are inverted from the cscore documentation.
@@ -54,7 +54,7 @@ class CameraManager:
         self.set_camera_property("brightness", 50)
         self.set_camera_property("raw_brightness", 127)
 
-    def get_frame(self) -> Tuple[int, np.ndarray]:
+    def get_frame(self) -> tuple[int, np.ndarray]:
         """Gets a frame from the camera.
         Returns:
             Time the frame was captured in microseconds, or 0 on error.
@@ -106,7 +106,7 @@ class MockImageManager:
         """
         self.image = new_image
 
-    def get_frame(self) -> Tuple[int, np.ndarray]:
+    def get_frame(self) -> tuple[int, np.ndarray]:
         """Returns self.image.
         Returns:
             1: Simulates the frame_time
@@ -142,7 +142,7 @@ class MockVideoManager:
         self.video = video
         self.display_output = display_output
 
-    def get_frame(self) -> Tuple[int, np.ndarray]:
+    def get_frame(self) -> tuple[int, np.ndarray]:
         """Returns the next frame of self.video.
         Returns:
             Whether or not it was successful. False means error.
@@ -184,7 +184,7 @@ class WebcamCameraManager:
         """
         self.video = cv2.VideoCapture(camera)
 
-    def get_frame(self) -> Tuple[int, np.ndarray]:
+    def get_frame(self) -> tuple[int, np.ndarray]:
         """Returns the current video frame.
         Returns:
             Whether or not it was successful. False means error.
