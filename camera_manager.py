@@ -1,47 +1,43 @@
 import numpy as np
 import cv2
-from magic_numbers import FRAME_HEIGHT, FRAME_WIDTH
 from typing import Tuple
+from camera_config import CameraParams
 import sys
+
+    
 
 
 class CameraManager:
     def __init__(
         self,
-        name: str,
         path: str,
-        height: int,
-        width: int,
-        fps: int,
+        params: CameraParams,
         pixel_format: str,
     ) -> None:
         """Initialises a Camera Manager
 
-        Args:
-            name: The name of the camera
+        Args:            
             path: The path of the camera (can be id, path, or /dev/video)
-            height: The frame height
-            width: The frame width
-            fps: The video fps
+            params: Specific parameters for the camera including intrinsics, image dimensions etc...
             pixel_format: The video's pixel format (kYUYV, kMJPEG, etc)
         """
         from cscore import CameraServer, VideoMode
 
         self.cs = CameraServer.getInstance()
 
-        self.camera = self.cs.startAutomaticCapture(name=name, path=path)
+        self.camera = self.cs.startAutomaticCapture(name=params.name, path=path)
         self.camera.setVideoMode(
-            getattr(VideoMode.PixelFormat, pixel_format), width, height, fps
+            getattr(VideoMode.PixelFormat, pixel_format), params.width, params.height, params.fps
         )
 
         # In this, source and sink are inverted from the cscore documentation.
         # self.sink is a CvSource and self.sources are CvSinks. This is because it makes more sense for a reader.
         # We get images from a source, and put images to a sink.
         self.source = self.cs.getVideo(camera=self.camera)
-        self.sink = self.cs.putVideo("Driver_Stream", FRAME_WIDTH, FRAME_HEIGHT)
+        self.sink = self.cs.putVideo("Driver_Stream", params.width, params.height)
         # Width and Height are reversed here because the order of putVideo's width and height
         # parameters are the opposite of numpy's (technically it is an array, not an actual image).
-        self.frame = np.zeros(shape=(FRAME_HEIGHT, FRAME_WIDTH, 3), dtype=np.uint8)
+        self.frame = np.zeros(shape=(params.height, params.width, 3), dtype=np.uint8)
 
         self.set_camera_property("white_balance_temperature_auto", 0)
         self.set_camera_property("exposure_auto_priority", 0)
