@@ -189,8 +189,8 @@ if __name__ == "__main__":
         CameraManager(
             "Camera",
             "/dev/video0",
-            magic_numbers.FRAME_HEIGHT,
-            magic_numbers.FRAME_WIDTH,
+            FRAME_HEIGHT,
+            FRAME_WIDTH,
             30,
             "kYUYV",
         ),
