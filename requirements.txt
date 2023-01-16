@@ -4,7 +4,4 @@
 opencv-python
 pytest
 pynetworktables
-paramiko
-scp
-robotpy-wpimath
 robotpy-cscore
