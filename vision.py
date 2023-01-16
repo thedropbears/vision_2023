@@ -1,6 +1,14 @@
 from camera_manager import CameraManager, CameraParams
 from connection import NTConnection
-from magic_numbers import *
+from magic_numbers import (
+    CONTOUR_TO_BOUNDING_BOX_AREA_RATIO_THRESHOLD,
+    CONE_HSV_HIGH,
+    CONE_HSV_LOW,
+    CUBE_HSV_HIGH,
+    CUBE_HSV_LOW,
+    FRAME_WIDTH,
+    FRAME_HEIGHT,
+)
 import cv2
 import numpy as np
 from helper_types import (
