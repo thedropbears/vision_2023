@@ -9,14 +9,19 @@ from magic_numbers import (
     FRAME_WIDTH,
     FRAME_HEIGHT,
 )
+
+from typing import Tuple, Optional, List
+from math import tan, atan2
 import cv2
 import numpy as np
 from helper_types import (
     GoalRegionObservation,
     GoalRegion,
+    GoalRegionState,
     ExpectedGamePiece,
     BoundingBox,
 )
+from camera_config import CameraParams
 from goal_map import GoalMap
 from wpimath.geometry import Pose2d, Pose3d, Translation3d, Transform3d
 import sys
@@ -167,8 +172,8 @@ def detect_goal_state(
 
 def annotate_image(
     frame: np.ndarray,
-    map: list[GoalState],
-    goal_observations: list[GoalRegionObservation],
+    map: List[GoalRegionState],
+    goal_observations: List[GoalRegionObservation],
 ) -> np.ndarray:
     """annotate a frame with projected goal points
 
@@ -183,68 +188,62 @@ def annotate_image(
     pass
 
 
-def get_goals_in_image(
+def is_goal_region_in_image(
     frame: np.ndarray,
     robot_pose: Pose2d,
-    robot_to_camera: Transform3d,
-    goal_regions: List[GoalRegion],
-) -> List[GoalRegionObservation]:
-
-    goals_in_image = []
-
-    # Check the robot is facing the right direction for the point
-    if not robot_is_facing_goal(robot_pose):
-        return goals_in_image
+    camera_params: CameraParams,
+    goal_region: GoalRegion,
+) -> bool:
 
     # create transform to make camera origin
     world_to_robot = Transform3d(Pose3d(), Pose3d(robot_pose))
-    world_to_camera = world_to_robot + robot_to_camera
+    world_to_camera = world_to_robot + camera_params.transform
+    goal_region_camera_frame = world_to_camera.inverse() + Transform3d(
+        goal_region.position, Rotation3d()
+    )
 
-    # extract translation and rotation for use in open-cv api
-    t_vec = np.array(list(world_to_camera.translation()))
-    r_vec = np.array(list(world_to_camera.rotation()))
+    # Check the robot is facing the right direction for the point by checking it is inside the FOV
+    if not point3d_in_field_of_view(
+        goal_region_camera_frame.translation(), camera_params
+    ):
+        return False
 
     # extract list of goal points for use in opencv api
-    goal_points = np.array()
-    goal_points_camera_frame = np.array()
-    np.append(
-        goal_points,
-        (
-            np.array(list(goal_region.position.translation()))
-            for goal_region in goal_regions
-        ),
-    )
+    goal_point_image_coordinates = []
 
     # Project point into pixel space
     cv2.projectPoints(
-        goal_points, r_vec, t_vec, CAMERA_MATRIX, imagePoints=goal_points_camera_frame
+        objectPoints=np.array(list[goal_region_camera_frame.translation()]),
+        camera_matrix=camera_params.K,
+        imagePoints=goal_point_image_coordinates,
     )
 
     # check image boundaries to determine which goals are actually in the image
-    for goal_point, goal_region in zip(goal_points_camera_frame, goal_regions):
-        if (
-            (goal_point[0] > 0)
-            and (goal_point[0] < len(frame[0]))
-            and (goal_point[1] > 0)
-            and (goal_point[1] < len(frame[1]))
-        ):
-            # Create bounding box for discovered goal
-            x1 = goal_point[0] - BOUNDING_BOX_SIZE / 2
-            x2 = goal_point[0] + BOUNDING_BOX_SIZE / 2
-            y1 = goal_point[1] - BOUNDING_BOX_SIZE / 2
-            y2 = goal_point[1] + BOUNDING_BOX_SIZE / 2
-
-            b_box = BoundingBox(x1, y1, x2, y2)
-            goals_in_image.append(GoalRegionObservation(b_box, goal_region))
-
-    # check pixel is within the bounds of the frame
-    return goals_in_image
+    return point2d_in_image_frame(goal_point_image_coordinates[0], frame)
 
 
-def robot_is_facing_goal(robot_pose: Pose2d) -> bool:
+def point3d_in_field_of_view(point: Translation3d, camera_params: CameraParams) -> bool:
+    vertical_angle = atan2(point.y(), point.z())
+    horizontal_angle = atan2(point.x(), point.z())
     return (
-        robot_pose.rotation() > DIRECTION_GATE_ANGLE
-        or robot_pose.rotation() < -DIRECTION_GATE_ANGLE
+        (point.z() < 0)
+        and not (
+            vertical_angle > -camera_params.get_vertical_fov() / 2
+            and vertical_angle < camera_params.get_vertical_fov() / 2
+        )
+        and not (
+            horizontal_angle > -camera_params.get_horizontal_fov()
+            and horizontal_angle < camera_params.get_horizontal_fov() / 2
+        )
+    )
+
+
+def point2d_in_image_frame(pixel: np.ndarray, frame: np.ndarray):
+    return (
+        (pixel[0] >= 0)
+        and (pixel[0] < frame.shape[1])
+        and (pixel[1] >= 0)
+        and (pixel[1] < frame.shape[0])
     )
 
 
