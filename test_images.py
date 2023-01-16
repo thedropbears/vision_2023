@@ -3,6 +3,8 @@ import pytest
 import cv2
 import vision
 from helper_types import BoundingBox, ExpectedGamePiece
+from goal_map import GoalRegionMap
+from wpimath.geometry import Pose2d
 
 
 def read_test_data_csv(fname: str):
@@ -23,7 +25,32 @@ def read_test_data_csv(fname: str):
     return result
 
 
+def read_segmentation_pipeline(fname: str):
+    with open(fname) as f:
+        result = []
+        for (
+            image,
+            goal_region_visible,
+            robot_x,
+            robot_y,
+            heading,
+            goal_region_id,
+        ) in csv.reader(f):
+            result.append(
+                (
+                    image,
+                    goal_region_visible == "True",
+                    float(robot_x),
+                    float(robot_y),
+                    float(heading),
+                    int(goal_region_id),
+                )
+            )
+    return result
+
+
 images = read_test_data_csv("test/expected.csv")
+segmentation_images = read_segmentation_pipeline("test/segmentation.csv")
 
 
 @pytest.mark.parametrize("filename,cone_present,cube_present,x1,y1,x2,y2", images)
@@ -81,3 +108,29 @@ def test_sample_images(
             vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CONE)
             is False
         ), "Nothing present in image but detector found cone"
+
+
+@pytest.mark.parametrize(
+    "filename,goal_region_visible,robot_x,robot_y,heading, goal_region_id",
+    segmentation_images,
+)
+def test_segmentation_images(
+    filename: str,
+    goal_region_visible: bool,
+    robot_x: float,
+    robot_y: float,
+    heading: float,
+    goal_region_id: int,
+):
+    image = cv2.imread(f"./test/{filename}")
+    assert image is not None
+    goal_region_map = GoalRegionMap()
+
+    goal_region = goal_region_map.get_state()[goal_region_id].goal_region
+
+    robot_pose = Pose2d(robot_x, robot_y, heading)
+
+    assert (
+        vision.is_goal_region_in_image(image, robot_pose, camera_matrix, goal_region)
+        == goal_region_visible
+    )
