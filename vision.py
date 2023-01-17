@@ -21,7 +21,7 @@ from helper_types import (
     BoundingBox,
 )
 from camera_config import CameraParams
-from goal_map import GoalMap
+from goal_map import GoalRegionMap
 from wpimath.geometry import Pose2d, Pose3d, Translation3d, Transform3d, Rotation3d
 
 
@@ -29,7 +29,7 @@ class Vision:
     def __init__(self, camera_manager: CameraManager, connection: NTConnection) -> None:
         self.camera_manager = camera_manager
         self.connection = connection
-        self.map = GoalMap()
+        self.map = GoalRegionMap()
 
     def run(self) -> None:
         """Main process function.
