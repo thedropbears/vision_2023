@@ -26,7 +26,7 @@ def read_test_data_csv(fname: str):
     return result
 
 
-def read_segmentation_pipeline(fname: str):
+def read_goal_region_in_frame_csv(fname: str):
     with open(fname) as f:
         result = []
         for (
@@ -51,7 +51,9 @@ def read_segmentation_pipeline(fname: str):
 
 
 images = read_test_data_csv("test/expected.csv")
-segmentation_images = read_segmentation_pipeline("test/segmentation.csv")
+goal_region_in_frame_images = read_goal_region_in_frame_csv(
+    "test/goal_region_in_frame.csv"
+)
 
 
 @pytest.mark.parametrize("filename,cone_present,cube_present,x1,y1,x2,y2", images)
@@ -113,9 +115,9 @@ def test_sample_images(
 
 @pytest.mark.parametrize(
     "filename,goal_region_visible,robot_x,robot_y,heading, goal_region_id",
-    segmentation_images,
+    goal_region_in_frame_images,
 )
-def test_segmentation_images(
+def test_goal_region_in_frame(
     filename: str,
     goal_region_visible: bool,
     robot_x: float,
