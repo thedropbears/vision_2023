@@ -139,3 +139,31 @@ def test_goal_region_in_frame(
         vision.is_goal_region_in_image(image, robot_pose, camera_matrix, goal_region)
         == goal_region_visible
     )
+
+
+def test_point2d_in_image_frame():
+    frame = np.ones((480, 640))
+
+    pixel_in_image = np.array([240, 320])
+
+    assert (
+        vision.point2d_in_image_frame(pixel_in_image, frame) is True
+    ), "pixel should be in image"
+
+    pixel_outside_image_1 = np.array([-10, 320])
+    pixel_outside_image_2 = np.array([490, 320])
+    pixel_outside_image_3 = np.array([240, -10])
+    pixel_outside_image_4 = np.array([240, 650])
+
+    assert (
+        vision.point2d_in_image_frame(pixel_outside_image_1, frame) is False
+    ), "pixel should be out of image"
+    assert (
+        vision.point2d_in_image_frame(pixel_outside_image_2, frame) is False
+    ), "pixel should be out of image"
+    assert (
+        vision.point2d_in_image_frame(pixel_outside_image_3, frame) is False
+    ), "pixel should be out of image"
+    assert (
+        vision.point2d_in_image_frame(pixel_outside_image_4, frame) is False
+    ), "pixel should be out of image"
