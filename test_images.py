@@ -6,6 +6,8 @@ from helper_types import BoundingBox, ExpectedGamePiece
 from goal_map import GoalRegionMap
 from wpimath.geometry import Pose2d
 import numpy as np
+from camera_config import CameraParams
+from wpimath.geometry import Pose3d, Translation3d, Rotation3d
 
 
 def read_test_data_csv(fname: str):
@@ -167,3 +169,50 @@ def test_point2d_in_image_frame():
     assert (
         vision.point2d_in_image_frame(pixel_outside_image_4, frame) is False
     ), "pixel should be out of image"
+
+
+def test_point_3d_in_field_of_view():
+    # create dummy camera matrix
+    extrinsic_robot_to_camera = Pose3d(
+        Translation3d(0.0, 0.0, 0.0), Rotation3d(0, 0, 0)
+    )
+    intrinsic_camera_matrix = np.array(
+        [
+            [1.12899023e03, 0.00000000e00, 6.34655248e02],
+            [0.00000000e00, 1.12747666e03, 3.46570772e02],
+            [0.00000000e00, 0.00000000e00, 1.00000000e00],
+        ]
+    )
+
+    camera_params = CameraParams(
+        "test_name", 1280, 720, extrinsic_robot_to_camera, intrinsic_camera_matrix, 30
+    )
+
+    # dummy points for in frame and out of frame
+    # at 5m the range from the camera perspective is -2.83m to 2.83m horizontally and  1.6m to -1.6m vertically
+    point_in_frame = Translation3d(5.0, 0.1, 0.1)
+    point_left_of_frame = Translation3d(5.0, 3.0, 0)
+    point_right_of_frame = Translation3d(5.0, -3.0, 0.0)
+    point_above_frame = Translation3d(5.0, 0.0, 2.0)
+    point_below_frame = Translation3d(5.0, 0.0, -2.0)
+    point_behind_frame = Translation3d(-5.0, 0.0, 0.0)
+
+    # assert results from function based on points
+    assert (
+        vision.point3d_in_field_of_view(point_in_frame, camera_params) is True
+    ), "point should be in fov"
+    assert (
+        vision.point3d_in_field_of_view(point_left_of_frame, camera_params) is False
+    ), "point should not be in fov"
+    assert (
+        vision.point3d_in_field_of_view(point_right_of_frame, camera_params) is False
+    ), "point should not be in fov"
+    assert (
+        vision.point3d_in_field_of_view(point_above_frame, camera_params) is False
+    ), "point should not be in fov"
+    assert (
+        vision.point3d_in_field_of_view(point_below_frame, camera_params) is False
+    ), "point should not be in fov"
+    assert (
+        vision.point3d_in_field_of_view(point_behind_frame, camera_params) is False
+    ), "point should not be in fov"
