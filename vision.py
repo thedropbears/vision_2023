@@ -187,7 +187,6 @@ def annotate_image(
 
 
 def is_goal_region_in_image(
-    frame: np.ndarray,
     robot_pose: Pose2d,
     camera_params: CameraParams,
     goal_region: GoalRegion,
@@ -201,35 +200,21 @@ def is_goal_region_in_image(
     )
 
     # Check the robot is facing the right direction for the point by checking it is inside the FOV
-    if not point3d_in_field_of_view(
+    return point3d_in_field_of_view(
         goal_region_camera_frame.translation(), camera_params
-    ):
-        return False
-
-    # extract list of goal points for use in opencv api
-    goal_point_image_coordinates = []
-
-    # Project point into pixel space
-    cv2.projectPoints(
-        objectPoints=np.array(list[goal_region_camera_frame.translation()]),
-        camera_matrix=camera_params.K,
-        imagePoints=goal_point_image_coordinates,
     )
-
-    # check image boundaries to determine which goals are actually in the image
-    return point2d_in_image_frame(goal_point_image_coordinates[0], frame)
 
 
 def point3d_in_field_of_view(point: Translation3d, camera_params: CameraParams) -> bool:
     vertical_angle = atan2(point.y(), point.z())
     horizontal_angle = atan2(point.x(), point.z())
     return (
-        (point.z() < 0)
-        and not (
+        (point.z() > 0)
+        and (
             vertical_angle > -camera_params.get_vertical_fov() / 2
             and vertical_angle < camera_params.get_vertical_fov() / 2
         )
-        and not (
+        and (
             horizontal_angle > -camera_params.get_horizontal_fov()
             and horizontal_angle < camera_params.get_horizontal_fov() / 2
         )
