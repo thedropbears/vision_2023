@@ -231,15 +231,6 @@ def point3d_in_field_of_view(point: Translation3d, camera_params: CameraParams) 
     )
 
 
-def point2d_in_image_frame(pixel: np.ndarray, frame: np.ndarray) -> bool:
-    return bool(
-        pixel[0] >= 0
-        and pixel[0] < frame.shape[0]
-        and pixel[1] >= 0
-        and pixel[1] < frame.shape[1]
-    )
-
-
 if __name__ == "__main__":
     # this is to run on the robot
     # to run vision code on your laptop use sim.py
