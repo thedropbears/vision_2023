@@ -206,6 +206,15 @@ def is_goal_region_in_image(
 
 
 def point3d_in_field_of_view(point: Translation3d, camera_params: CameraParams) -> bool:
+    """Determines if a point in 3d space relative to the camera coordinate frame is visible in a camera's field of view
+
+    Args:
+        point (Translation3d): _point in 3d space relative to a camera
+        camera_params (CameraParams): camera parameters structure providing information about a frame being processed
+
+    Returns:
+        bool: if point is visible
+    """
     vertical_angle = atan2(point.z, point.x)
     horizontal_angle = atan2(point.y, point.x)
 
