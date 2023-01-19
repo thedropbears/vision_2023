@@ -3,7 +3,7 @@ import pytest
 import cv2
 import vision
 from helper_types import BoundingBox, ExpectedGamePiece
-from goal_map import GoalRegionMap
+from node_map import NodeRegionMap
 from wpimath.geometry import Pose2d
 import numpy as np
 from camera_config import CameraParams
@@ -28,33 +28,33 @@ def read_test_data_csv(fname: str):
     return result
 
 
-def read_goal_region_in_frame_csv(fname: str):
+def read_node_region_in_frame_csv(fname: str):
     with open(fname) as f:
         result = []
         for (
             image,
-            goal_region_visible,
+            node_region_visible,
             robot_x,
             robot_y,
             heading,
-            goal_region_id,
+            node_region_id,
         ) in csv.reader(f):
             result.append(
                 (
                     image,
-                    goal_region_visible == "True",
+                    node_region_visible == "True",
                     float(robot_x),
                     float(robot_y),
                     float(heading),
-                    int(goal_region_id),
+                    int(node_region_id),
                 )
             )
     return result
 
 
 images = read_test_data_csv("test/expected.csv")
-goal_region_in_frame_images = read_goal_region_in_frame_csv(
-    "test/goal_region_in_frame.csv"
+node_region_in_frame_images = read_node_region_in_frame_csv(
+    "test/node_region_in_frame.csv"
 )
 
 
@@ -116,30 +116,30 @@ def test_sample_images(
 
 
 @pytest.mark.parametrize(
-    "filename,goal_region_visible,robot_x,robot_y,heading, goal_region_id",
-    goal_region_in_frame_images,
+    "filename,node_region_visible,robot_x,robot_y,heading, node_region_id",
+    node_region_in_frame_images,
 )
-def test_goal_region_in_frame(
+def test_node_region_in_frame(
     filename: str,
-    goal_region_visible: bool,
+    node_region_visible: bool,
     robot_x: float,
     robot_y: float,
     heading: float,
-    goal_region_id: int,
+    node_region_id: int,
 ):
     image = cv2.imread(f"./test/{filename}")
     assert image is not None
-    goal_region_map = GoalRegionMap()
+    node_region_map = NodeRegionMap()
 
-    goal_region = goal_region_map.get_state()[goal_region_id].goal_region
+    node_region = node_region_map.get_state()[node_region_id].node_region
 
     robot_pose = Pose2d(robot_x, robot_y, heading)
 
     camera_matrix = np.array([1, 0, 0], [0, 1, 0], [0, 0, 1])
 
     assert (
-        vision.is_goal_region_in_image(image, robot_pose, camera_matrix, goal_region)
-        == goal_region_visible
+        vision.is_node_region_in_image(image, robot_pose, camera_matrix, node_region)
+        == node_region_visible
     )
 
 

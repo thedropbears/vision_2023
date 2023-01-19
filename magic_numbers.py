@@ -15,7 +15,7 @@ CUBE_HSV_HIGH = np.array([(185 / 240) * 180, (240 / 240) * 255, (225 / 240) * 25
 
 CONTOUR_TO_BOUNDING_BOX_AREA_RATIO_THRESHOLD = 0.1
 
-# Gate angle to determine if robot can even see the goal or not to avoid projecting backwards
+# Gate angle to determine if robot can even see the node or not to avoid projecting backwards
 DIRECTION_GATE_ANGLE = pi
 
 ROBOT_BASE_TO_CAMERA_TRANSLATION = Translation3d(0.0, 0.0, 0.0)

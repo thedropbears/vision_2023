@@ -21,19 +21,19 @@ class BoundingBox:
 
 
 @dataclass
-class GoalRegion:
+class NodeRegion:
     id: int
     expected_game_piece: ExpectedGamePiece
     position: Translation3d
 
 
 @dataclass
-class GoalRegionObservation:
+class NodeRegionObservation:
     bounding_box: BoundingBox
-    goal_region: GoalRegion
+    node_region: NodeRegion
 
 
 @dataclass
-class GoalRegionState:
-    goal_region: GoalRegion
+class NodeRegionState:
+    node_region: NodeRegion
     occupied: bool = False

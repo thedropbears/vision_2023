@@ -14,14 +14,14 @@ from math import atan2
 import cv2
 import numpy as np
 from helper_types import (
-    GoalRegionObservation,
-    GoalRegion,
-    GoalRegionState,
+    NodeRegionObservation,
+    NodeRegion,
+    NodeRegionState,
     ExpectedGamePiece,
     BoundingBox,
 )
 from camera_config import CameraParams
-from goal_map import GoalRegionMap
+from node_map import NodeRegionMap
 from wpimath.geometry import Pose2d, Pose3d, Translation3d, Transform3d, Rotation3d
 
 
@@ -29,7 +29,7 @@ class Vision:
     def __init__(self, camera_manager: CameraManager, connection: NTConnection) -> None:
         self.camera_manager = camera_manager
         self.connection = connection
-        self.map = GoalRegionMap()
+        self.map = NodeRegionMap()
 
     def run(self) -> None:
         """Main process function.
@@ -124,84 +124,84 @@ def is_game_piece_present(
 
 def process_image(frame: np.ndarray, pose: Pose2d):
 
-    # visible_goals = self.find_visible_goals(frame, pose)
+    # visible_nodes = self.find_visible_nodes(frame, pose)
 
-    # goal_states = self.detect_goal_state(frame, visible_goals)
+    # node_states = self.detect_node_state(frame, visible_nodes)
 
     # whatever the update step is
-    # self.map.update(goal_states)
+    # self.map.update(node_states)
 
     # map_state = self.map.get_state()
 
     # annotate frame
-    # annotated_frame = annotate_image(frame, map_state, goal_states)
+    # annotated_frame = annotate_image(frame, map_state, node_states)
 
-    # return state of map (state of all goal regions) and annotated camera stream
+    # return state of map (state of all node regions) and annotated camera stream
     return
 
 
-def find_visible_goals(frame: np.ndarray, pose: Pose2d) -> list[GoalRegionObservation]:
-    """Segment image to find visible goals in a frame
+def find_visible_nodes(frame: np.ndarray, pose: Pose2d) -> list[NodeRegionObservation]:
+    """Segment image to find visible nodes in a frame
 
     Args:
-        frame (np.ndarray): New camera frame containing goals
+        frame (np.ndarray): New camera frame containing nodes
         pose (Pose2d): Current robot pose in the world frame
 
     Returns:
-        List[GoalRegionObservation]: List of goal region observations with no information about occupancy
+        List[NodeRegionObservation]: List of node region observations with no information about occupancy
     """
     pass
 
 
-def detect_goal_state(
-    frame: np.ndarray, regions_of_interest: list[GoalRegionObservation]
-) -> list[GoalRegionObservation]:
-    """Detect goal occupancy in a set of observed goal regions
+def detect_node_state(
+    frame: np.ndarray, regions_of_interest: list[NodeRegionObservation]
+) -> list[NodeRegionObservation]:
+    """Detect node occupancy in a set of observed node regions
 
     Args:
-        frame (np.ndarray): New camera frame containing goals
-        regions_of_interest (List[GoalRegionObservation]): List of goal region observations with no information about occupancy
+        frame (np.ndarray): New camera frame containing nodes
+        regions_of_interest (List[NodeRegionObservation]): List of node region observations with no information about occupancy
 
     Returns:
-        List[GoalRegionObservation]: List of goal region observations
+        List[NodeRegionObservation]: List of node region observations
     """
     pass
 
 
 def annotate_image(
     frame: np.ndarray,
-    map: list[GoalRegionState],
-    goal_observations: list[GoalRegionObservation],
+    map: list[NodeRegionState],
+    node_observations: list[NodeRegionObservation],
 ) -> np.ndarray:
-    """annotate a frame with projected goal points
+    """annotate a frame with projected node points
 
     Args:
         frame (np.ndarray): raw image frame without annotation
-        map (List[GoalState]): current map state with information on occupancy state_
-        goal_observations (List[GoalRegionObservation]): goal observations in the current time step
+        map (List[NodeState]): current map state with information on occupancy state_
+        node_observations (List[NodeRegionObservation]): node observations in the current time step
 
     Returns:
-        np.ndarray: frame annotated with observed goal regions
+        np.ndarray: frame annotated with observed node regions
     """
     pass
 
 
-def is_goal_region_in_image(
+def is_node_region_in_image(
     robot_pose: Pose2d,
     camera_params: CameraParams,
-    goal_region: GoalRegion,
+    node_region: NodeRegion,
 ) -> bool:
 
     # create transform to make camera origin
     world_to_robot = Transform3d(Pose3d(), Pose3d(robot_pose))
     world_to_camera = world_to_robot + camera_params.transform
-    goal_region_camera_frame = world_to_camera.inverse() + Transform3d(
-        goal_region.position, Rotation3d()
+    node_region_camera_frame = world_to_camera.inverse() + Transform3d(
+        node_region.position, Rotation3d()
     )
 
     # Check the robot is facing the right direction for the point by checking it is inside the FOV
     return point3d_in_field_of_view(
-        goal_region_camera_frame.translation(), camera_params
+        node_region_camera_frame.translation(), camera_params
     )
 
 
