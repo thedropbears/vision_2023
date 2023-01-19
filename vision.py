@@ -206,10 +206,10 @@ def is_goal_region_in_image(
 
 
 def point3d_in_field_of_view(point: Translation3d, camera_params: CameraParams) -> bool:
-    vertical_angle = atan2(point.y(), point.z())
-    horizontal_angle = atan2(point.x(), point.z())
+    vertical_angle = atan2(point.z(), point.x())
+    horizontal_angle = atan2(point.y(), point.x())
     return (
-        (point.z() > 0)
+        (point.x() > 0)
         and (
             vertical_angle > -camera_params.get_vertical_fov() / 2
             and vertical_angle < camera_params.get_vertical_fov() / 2
