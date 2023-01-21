@@ -1,0 +1,11 @@
+total error: 10.267621373894675
+successful images 71
+camera matrix:
+ [[2.59902605e+03 0.00000000e+00 3.26226895e+02]
+ [0.00000000e+00 1.93588180e+04 2.30318105e+02]
+ [0.00000000e+00 0.00000000e+00 1.00000000e+00]]
+distortion coefficients:
+ [[-7.71812663e+00 -4.91163727e+02  2.54015912e-02 -5.11991757e-03
+   3.76805012e+01]]
+
+   video used: chessboard_videos\LogiC920_a3_chessboard_0630.mp4
