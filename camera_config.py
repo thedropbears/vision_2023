@@ -14,7 +14,7 @@ class CameraParams:
     fps: int
 
     def get_horizontal_fov(self) -> float:
-        return 2 * atan2(self.width / 2, self.K[0][0])
+        return 2 * atan2(self.width / 2, self.K[0, 0])
 
     def get_vertical_fov(self) -> float:
-        return 2 * atan2(self.height / 2, self.K[1][1])
+        return 2 * atan2(self.height / 2, self.K[1, 1])
