@@ -222,11 +222,13 @@ def point3d_in_field_of_view(point: Translation3d, camera_params: CameraParams) 
         (point.x > 0)
         and (
             -camera_params.get_vertical_fov() / 2
-            < vertical_angle < camera_params.get_vertical_fov() / 2
+            < vertical_angle
+            < camera_params.get_vertical_fov() / 2
         )
         and (
             -camera_params.get_horizontal_fov() / 2
-            < horizontal_angle < camera_params.get_horizontal_fov() / 2
+            < horizontal_angle
+            < camera_params.get_horizontal_fov() / 2
         )
     )
 
