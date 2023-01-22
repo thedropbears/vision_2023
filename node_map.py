@@ -9,19 +9,19 @@ from wpimath.geometry import Translation3d
 
 class NodeRegionMap:
     X_OFFSET_TO_GRID: float = 0.0
-    Y_OFFSET_TO_GRID: float = 516.763
+    Y_OFFSET_TO_GRID: float = 0.516763
     INTAKE_ZONE_OFFSET: float = 0.0
-    Y_DISTANCE_BETWEEN_NODES: float = 558.0
+    Y_DISTANCE_BETWEEN_NODES: float = 0.558
 
-    Z_DISTANCE_CUBE_LOOK_UP: list[float] = [1169.988, 865.188, 0.0]
+    Z_DISTANCE_CUBE_LOOK_UP: list[float] = [1.169988, 0.865188, 0.0]
     Z_DISTANCE_CONE_LOOK_UP: list[float] = [
-        826.326 + 120.0,
-        522.288 + 120.0,
-        0.0 + 120.0,
+        0.826326 + 0.1200,
+        0.522288 + 0.1200,
+        0.0 + 0.1200,
     ]
 
-    X_DISTANCE_CUBE_LOOK_UP: list[float] = [353.22, 796.777, 1197.227]
-    X_DISTANCE_CONE_LOOK_UP: list[float] = [364.231, 795.231, 1167.655]
+    X_DISTANCE_CUBE_LOOK_UP: list[float] = [0.35322, 0.796777, 1.197227]
+    X_DISTANCE_CONE_LOOK_UP: list[float] = [0.364231, 0.795231, 1.167655]
 
     def __init__(self, on_blue_alliance: bool):
         self.node_map: list[NodeRegionState] = []
