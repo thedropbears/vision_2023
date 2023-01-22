@@ -4,10 +4,9 @@ import cv2
 import vision
 from helper_types import BoundingBox, ExpectedGamePiece
 from node_map import NodeRegionMap
-from wpimath.geometry import Pose2d
 import numpy as np
 from camera_config import CameraParams
-from wpimath.geometry import Pose3d, Translation3d, Rotation3d
+from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Pose2d
 
 
 def read_test_data_csv(fname: str):
@@ -145,7 +144,7 @@ def test_node_region_in_frame(
 
 def test_point_3d_in_field_of_view():
     # create dummy camera matrix
-    extrinsic_robot_to_camera = Pose3d(
+    extrinsic_robot_to_camera = Transform3d(
         Translation3d(0.0, 0.0, 0.0), Rotation3d(0, 0, 0)
     )
     intrinsic_camera_matrix = np.array(

@@ -238,7 +238,7 @@ if __name__ == "__main__":
     # to run vision code on your laptop use sim.py
     K = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])  # To update
 
-    params = CameraParams("Camera", FRAME_WIDTH, FRAME_HEIGHT, Pose3d(), K, 30)
+    params = CameraParams("Camera", FRAME_WIDTH, FRAME_HEIGHT, Translation3d(), K, 30)
 
     vision = Vision(
         CameraManager(
