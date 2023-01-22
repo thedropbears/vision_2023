@@ -195,8 +195,8 @@ def is_node_region_in_image(
     # create transform to make camera origin
     world_to_robot = Transform3d(Pose3d(), Pose3d(robot_pose))
     world_to_camera = world_to_robot + camera_params.transform
-    node_region_camera_frame = world_to_camera.inverse() + Transform3d(
-        node_region.position, Rotation3d()
+    node_region_camera_frame = (
+        Pose3d(node_region.position, Rotation3d()) + world_to_camera.inverse()
     )
 
     # Check the robot is facing the right direction for the point by checking it is inside the FOV
