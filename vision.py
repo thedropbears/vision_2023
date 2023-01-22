@@ -1,4 +1,4 @@
-from camera_manager import CameraManager, CameraParams
+from camera_manager import CameraManager
 from connection import NTConnection
 from magic_numbers import (
     CONTOUR_TO_BOUNDING_BOX_AREA_RATIO_THRESHOLD,
@@ -9,23 +9,27 @@ from magic_numbers import (
     FRAME_WIDTH,
     FRAME_HEIGHT,
 )
+
+from math import atan2
 import cv2
 import numpy as np
 from helper_types import (
-    GoalRegionObservation,
-    GoalState,
+    NodeRegionObservation,
+    NodeRegion,
+    NodeRegionState,
     ExpectedGamePiece,
     BoundingBox,
 )
-from goal_map import GoalMap
-from wpimath.geometry import Pose2d, Pose3d
+from camera_config import CameraParams
+from node_map import NodeRegionMap
+from wpimath.geometry import Pose2d, Pose3d, Translation3d, Transform3d, Rotation3d
 
 
 class Vision:
     def __init__(self, camera_manager: CameraManager, connection: NTConnection) -> None:
         self.camera_manager = camera_manager
         self.connection = connection
-        self.map = GoalMap()
+        self.map = NodeRegionMap()
 
     def run(self) -> None:
         """Main process function.
@@ -120,66 +124,113 @@ def is_game_piece_present(
 
 def process_image(frame: np.ndarray, pose: Pose2d):
 
-    # visible_goals = self.find_visible_goals(frame, pose)
+    # visible_nodes = self.find_visible_nodes(frame, pose)
 
-    # goal_states = self.detect_goal_state(frame, visible_goals)
+    # node_states = self.detect_node_state(frame, visible_nodes)
 
     # whatever the update step is
-    # self.map.update(goal_states)
+    # self.map.update(node_states)
 
     # map_state = self.map.get_state()
 
     # annotate frame
-    # annotated_frame = annotate_image(frame, map_state, goal_states)
+    # annotated_frame = annotate_image(frame, map_state, node_states)
 
-    # return state of map (state of all goal regions) and annotated camera stream
+    # return state of map (state of all node regions) and annotated camera stream
     return
 
 
-def find_visible_goals(frame: np.ndarray, pose: Pose2d) -> list[GoalRegionObservation]:
-    """Segment image to find visible goals in a frame
+def find_visible_nodes(frame: np.ndarray, pose: Pose2d) -> list[NodeRegionObservation]:
+    """Segment image to find visible nodes in a frame
 
     Args:
-        frame (np.ndarray): New camera frame containing goals
+        frame (np.ndarray): New camera frame containing nodes
         pose (Pose2d): Current robot pose in the world frame
 
     Returns:
-        List[GoalRegionObservation]: List of goal region observations with no information about occupancy
+        List[NodeRegionObservation]: List of node region observations with no information about occupancy
     """
     pass
 
 
-def detect_goal_state(
-    frame: np.ndarray, regions_of_interest: list[GoalRegionObservation]
-) -> list[GoalRegionObservation]:
-    """Detect goal occupancy in a set of observed goal regions
+def detect_node_state(
+    frame: np.ndarray, regions_of_interest: list[NodeRegionObservation]
+) -> list[NodeRegionObservation]:
+    """Detect node occupancy in a set of observed node regions
 
     Args:
-        frame (np.ndarray): New camera frame containing goals
-        regions_of_interest (List[GoalRegionObservation]): List of goal region observations with no information about occupancy
+        frame (np.ndarray): New camera frame containing nodes
+        regions_of_interest (List[NodeRegionObservation]): List of node region observations with no information about occupancy
 
     Returns:
-        List[GoalRegionObservation]: List of goal region observations
+        List[NodeRegionObservation]: List of node region observations
     """
     pass
 
 
 def annotate_image(
     frame: np.ndarray,
-    map: list[GoalState],
-    goal_observations: list[GoalRegionObservation],
+    map: list[NodeRegionState],
+    node_observations: list[NodeRegionObservation],
 ) -> np.ndarray:
-    """annotate a frame with projected goal points
+    """annotate a frame with projected node points
 
     Args:
         frame (np.ndarray): raw image frame without annotation
-        map (List[GoalState]): current map state with information on occupancy state_
-        goal_observations (List[GoalRegionObservation]): goal observations in the current time step
+        map (List[NodeState]): current map state with information on occupancy state_
+        node_observations (List[NodeRegionObservation]): node observations in the current time step
 
     Returns:
-        np.ndarray: frame annotated with observed goal regions
+        np.ndarray: frame annotated with observed node regions
     """
     pass
+
+
+def is_node_region_in_image(
+    robot_pose: Pose2d,
+    camera_params: CameraParams,
+    node_region: NodeRegion,
+) -> bool:
+
+    # create transform to make camera origin
+    world_to_robot = Transform3d(Pose3d(), Pose3d(robot_pose))
+    world_to_camera = world_to_robot + camera_params.transform
+    node_region_camera_frame = (
+        Pose3d(node_region.position, Rotation3d()) + world_to_camera.inverse()
+    )
+
+    # Check the robot is facing the right direction for the point by checking it is inside the FOV
+    return point3d_in_field_of_view(
+        node_region_camera_frame.translation(), camera_params
+    )
+
+
+def point3d_in_field_of_view(point: Translation3d, camera_params: CameraParams) -> bool:
+    """Determines if a point in 3d space relative to the camera coordinate frame is visible in a camera's field of view
+
+    Args:
+        point (Translation3d): _point in 3d space relative to a camera
+        camera_params (CameraParams): camera parameters structure providing information about a frame being processed
+
+    Returns:
+        bool: if point is visible
+    """
+    vertical_angle = atan2(point.z, point.x)
+    horizontal_angle = atan2(point.y, point.x)
+
+    return (
+        (point.x > 0)
+        and (
+            -camera_params.get_vertical_fov() / 2
+            < vertical_angle
+            < camera_params.get_vertical_fov() / 2
+        )
+        and (
+            -camera_params.get_horizontal_fov() / 2
+            < horizontal_angle
+            < camera_params.get_horizontal_fov() / 2
+        )
+    )
 
 
 if __name__ == "__main__":
@@ -187,7 +238,7 @@ if __name__ == "__main__":
     # to run vision code on your laptop use sim.py
     K = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])  # To update
 
-    params = CameraParams("Camera", FRAME_WIDTH, FRAME_HEIGHT, Pose3d(), K, 30)
+    params = CameraParams("Camera", FRAME_WIDTH, FRAME_HEIGHT, Translation3d(), K, 30)
 
     vision = Vision(
         CameraManager(

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+from wpimath.geometry import Translation3d
 
 
 class ExpectedGamePiece(Enum):
@@ -20,14 +21,19 @@ class BoundingBox:
 
 
 @dataclass
-class GoalRegionObservation:
-    bounding_box: BoundingBox
+class NodeRegion:
+    id: int
     expected_game_piece: ExpectedGamePiece
-    expected_id: int
+    position: Translation3d
 
 
 @dataclass
-class GoalState:
-    actual_id: int
-    allowable_game_pieces: ExpectedGamePiece
-    occupied: bool
+class NodeRegionObservation:
+    bounding_box: BoundingBox
+    node_region: NodeRegion
+
+
+@dataclass
+class NodeRegionState:
+    node_region: NodeRegion
+    occupied: bool = False
