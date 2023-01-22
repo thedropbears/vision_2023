@@ -24,7 +24,7 @@ class NodeRegionMap:
     X_DISTANCE_CONE_LOOK_UP: list[float] = [364.231, 795.231, 1167.655]
 
     def __init__(self, on_blue_alliance: bool):
-        self.map: list[NodeRegionState] = []
+        self.node_map: list[NodeRegionState] = []
 
         # This will start from the top row of nodes
         for row in range(3):
@@ -57,12 +57,12 @@ class NodeRegionMap:
 
                     position = Translation3d(pos_x, pos_y, pos_z)
 
-                    self.map.append[
+                    self.node_map.append(
                         (NodeRegionState(NodeRegion(id, expected_game_piece, position)))
-                    ]
+                    )
 
     def update(self, node_observations: list[NodeRegionObservation]):
         pass
 
     def get_state(self) -> list[NodeRegionState]:
-        return self.map
+        return self.node_map
