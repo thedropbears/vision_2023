@@ -6,7 +6,7 @@ from helper_types import BoundingBox, ExpectedGamePiece
 from node_map import NodeRegionMap
 import numpy as np
 from camera_config import CameraParams
-from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Pose2d
+from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Rotation2d, Pose2d
 
 
 def read_test_data_csv(fname: str):
@@ -127,7 +127,7 @@ def test_is_node_region_in_image(
 
     node_region = node_region_map.get_state()[node_region_id].node_region
 
-    robot_pose = Pose2d(robot_x, robot_y, heading)
+    robot_pose = Pose2d(robot_x, robot_y, Rotation2d.fromDegrees(heading))
 
     extrinsic_robot_to_camera = Transform3d(
         Translation3d(-0.35, 0.005, 0.26624),
