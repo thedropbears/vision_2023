@@ -31,7 +31,6 @@ def read_node_region_in_frame_csv(fname: str):
     with open(fname) as f:
         result = []
         for (
-            image,
             node_region_visible,
             robot_x,
             robot_y,
@@ -40,7 +39,6 @@ def read_node_region_in_frame_csv(fname: str):
         ) in csv.reader(f):
             result.append(
                 (
-                    image,
                     node_region_visible == "True",
                     float(robot_x),
                     float(robot_y),
@@ -115,29 +113,40 @@ def test_sample_images(
 
 
 @pytest.mark.parametrize(
-    "filename,node_region_visible,robot_x,robot_y,heading, node_region_id",
+    "node_region_visible,robot_x,robot_y,heading,node_region_id",
     node_region_in_frame_images,
 )
-def test_node_region_in_frame(
-    filename: str,
+def test_is_node_region_in_image(
     node_region_visible: bool,
     robot_x: float,
     robot_y: float,
     heading: float,
     node_region_id: int,
 ):
-    image = cv2.imread(f"./test/{filename}")
-    assert image is not None
-    node_region_map = NodeRegionMap()
+    node_region_map = NodeRegionMap(on_blue_alliance=True)
 
     node_region = node_region_map.get_state()[node_region_id].node_region
 
     robot_pose = Pose2d(robot_x, robot_y, heading)
 
-    camera_matrix = np.array([1, 0, 0], [0, 1, 0], [0, 0, 1])
+    extrinsic_robot_to_camera = Transform3d(
+        Translation3d(-0.35, 0.005, 0.26624),
+        Rotation3d.fromDegrees(0, 0, 180),
+    )
+    intrinsic_camera_matrix = np.array(
+        [
+            [1.12899023e03, 0.00000000e00, 6.34655248e02],
+            [0.00000000e00, 1.12747666e03, 3.46570772e02],
+            [0.00000000e00, 0.00000000e00, 1.00000000e00],
+        ]
+    )
+
+    camera_params = CameraParams(
+        "test_name", 1280, 720, extrinsic_robot_to_camera, intrinsic_camera_matrix, 30
+    )
 
     assert (
-        vision.is_node_region_in_image(image, robot_pose, camera_matrix, node_region)
+        vision.is_node_region_in_image(robot_pose, camera_params, node_region)
         == node_region_visible
     )
 
