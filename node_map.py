@@ -58,7 +58,7 @@ class NodeRegionMap:
                     position = Translation3d(pos_x, pos_y, pos_z)
 
                     self.node_map.append(
-                        (NodeRegionState(NodeRegion(id, expected_game_piece, position)))
+                        NodeRegionState(NodeRegion(id, expected_game_piece, position))
                     )
 
     def update(self, node_observations: list[NodeRegionObservation]):
