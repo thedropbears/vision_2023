@@ -150,6 +150,7 @@ class Vision:
         self,
         centre: tuple[int, int],
         node_point: Translation3d,
+        expected_game_piece: ExpectedGamePiece,
         camera_params: CameraParams
         ) -> BoundingBox:
         """Determine appropriate bounding box based on location of game piece relative to camera
@@ -162,7 +163,33 @@ class Vision:
         Returns:
             BoundingBox: bounding box within which a game piece is expected to be contained
         """
-        pass
+
+        # Get max dimension of game piece
+        if expected_game_piece == ExpectedGamePiece.CUBE:
+            gp_size = CUBE_HEIGHT
+        else:
+            gp_size = CONE_HEIGHT
+
+        # Get gamepiece size in pixels
+        # TODO: convert gp size to pixels
+        # gp_width
+
+        x1 = centre(0) - gp_width / 2
+        y1 = centre(1) - gp_width / 2
+        x2 = centre(0) + gp_width / 2
+        y2 = centre(1) + gp_width / 2
+
+        # Check against bounds of image
+        if x1 < 0:
+            x1 = 0
+        if y1 < 0:
+            y1 = 0
+        if x2 > camera_params.width:
+            x2 = camera_params.width
+        if y2 > camera_params.height:
+            y2 = camera_params.height
+
+        return BoundingBox(x1, y1, x2, y2)
 
 
     def find_visible_nodes(self, frame: np.ndarray, pose: Pose2d) -> list[NodeRegionObservation]:
@@ -194,8 +221,8 @@ class Vision:
                     node_position = node_region_camera_frame.translation()
 
                     # Get image coordinates of centre of node region
-                    x_coord = node_position.y * params.get_fx() / node_position.x 
-                    y_coord = node_position.z * params.get_fy() / node_position.x
+                    x_coord = params.width/2 + node_position.y * params.get_fx() / node_position.x 
+                    y_coord = params.height/2 + node_position.z * params.get_fy() / node_position.x
                     # TODO: distort point as above coordinates are calculated for projection into undistorted image frame
                     coords = (int(x_coord), int(y_coord))
 
