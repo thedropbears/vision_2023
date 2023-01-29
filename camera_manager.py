@@ -7,6 +7,7 @@ import sys
 class CameraManager:
     def __init__(
         self,
+        camera_id: int,
         path: str,
         params: CameraParams,
         pixel_format: str,
@@ -21,6 +22,10 @@ class CameraManager:
         from cscore import CameraServer, VideoMode
 
         self.cs = CameraServer.getInstance()
+
+        self.camera_id = camera_id
+        
+        self.params = params
 
         self.camera = self.cs.startAutomaticCapture(name=params.name, path=path)
         self.camera.setVideoMode(
@@ -53,6 +58,20 @@ class CameraManager:
         self.set_camera_property("white_balance_temperature", 6500)
         self.set_camera_property("brightness", 50)
         self.set_camera_property("raw_brightness", 127)
+
+    def get_id(self) -> int:
+        """ Get the unique camera id
+        Returns:
+            int
+        """
+        return self.camera_id
+
+    def get_params(self) -> CameraParams:
+        """Gets the camera parameters of the associated camera
+        Returns:
+            CameraParams
+        """
+        return self.params
 
     def get_frame(self) -> tuple[int, np.ndarray]:
         """Gets a frame from the camera.

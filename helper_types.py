@@ -10,7 +10,7 @@ class ExpectedGamePiece(Enum):
 
 
 class BoundingBox:
-    def __init__(self, x1: int, y1: int, x2: int, y2):
+    def __init__(self, x1: int, y1: int, x2: int, y2: int):
         self.x1 = x1
         self.x2 = x2
         self.y1 = y1
@@ -29,6 +29,7 @@ class NodeRegion:
 
 @dataclass
 class NodeRegionObservation:
+    camera_id: int
     bounding_box: BoundingBox
     node_region: NodeRegion
 
