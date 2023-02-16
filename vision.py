@@ -8,9 +8,14 @@ from magic_numbers import (
     CUBE_HSV_LOW,
     FRAME_WIDTH,
     FRAME_HEIGHT,
+    CONE_HEIGHT,
+    CUBE_HEIGHT,
+    CONE_WIDTH,
+    CUBE_WIDTH,
+    CAMERA_MATRIX
 )
 
-from math import atan2
+from math import atan2, tan, pi
 import cv2
 import numpy as np
 from helper_types import (
@@ -29,7 +34,7 @@ class Vision:
     def __init__(self, cameras: list[CameraManager], connection: NTConnection) -> None:
         self.cameras = cameras
         self.connection = connection
-        self.map = NodeRegionMap()
+        self.map = NodeRegionMap(on_blue_alliance=False)
 
     def run(self) -> None:
         """Main process function.
@@ -109,7 +114,7 @@ class Vision:
             # run cube mask
             lower_purple = CUBE_HSV_LOW
             upper_purple = CUBE_HSV_HIGH
-            cube_present = is_coloured_game_piece(
+            cube_present = self.is_coloured_game_piece(
                 hsv, lower_purple, upper_purple, bounding_box.area()
             )
 
@@ -121,7 +126,7 @@ class Vision:
             lower_yellow = CONE_HSV_LOW
             upper_yellow = CONE_HSV_HIGH
 
-            cone_present = is_coloured_game_piece(
+            cone_present = self.is_coloured_game_piece(
                 hsv, lower_yellow, upper_yellow, bounding_box.area()
             )
 
@@ -152,32 +157,36 @@ class Vision:
         node_point: Translation3d,
         expected_game_piece: ExpectedGamePiece,
         camera_params: CameraParams
-        ) -> BoundingBox:
-        """Determine appropriate bounding box based on location of game piece relative to camera
+    ) -> BoundingBox:
+        """Determine appropriate bounding box based on location of game piece relative to camer     
 
         Args:
-            centre (tuple): x and y coordinates of centre of node in image frame
-            node_point (Translation3d): pose of node in camera frame
-            camera_params (CameraParams): relevant camera parameters for node region observation
+            `centre` (tuple): x and y coordinates of centre of node in image frame
+            `node_point` (Translation3d): pose of node in camera frame
+            `camera_params` (CameraParams): relevant camera parameters for node region observation
 
         Returns:
-            BoundingBox: bounding box within which a game piece is expected to be contained
+            `BoundingBox`: bounding box within which a game piece is expected to be contained
         """
 
+        is_cube = expected_game_piece == ExpectedGamePiece.CUBE
+
         # Get max dimension of game piece
-        if expected_game_piece == ExpectedGamePiece.CUBE:
-            gp_size = CUBE_HEIGHT
-        else:
-            gp_size = CONE_HEIGHT
+        gp_height = CUBE_HEIGHT if is_cube else CONE_HEIGHT
+        gp_width = CUBE_WIDTH if is_cube else CONE_WIDTH
 
         # Get gamepiece size in pixels
-        # TODO: convert gp size to pixels
-        # gp_width
+        
+        horizontal_pixels = (1. / 950.0960104757881) / camera_params.width
+        vertical_pixels   = (1. / 949.2742671058766) / camera_params.height
 
-        x1 = centre(0) - gp_width / 2
-        y1 = centre(1) - gp_width / 2
-        x2 = centre(0) + gp_width / 2
-        y2 = centre(1) + gp_width / 2
+        gp_width = gp_width * horizontal_pixels
+        gp_height = gp_height * vertical_pixels
+
+        x1 = centre(0) - gp_width  / 2
+        y1 = centre(1) - gp_height / 2
+        x2 = centre(0) + gp_width  / 2
+        y2 = centre(1) + gp_height / 2
 
         # Check against bounds of image
         if x1 < 0:
@@ -191,16 +200,25 @@ class Vision:
 
         return BoundingBox(x1, y1, x2, y2)
 
+    def transform_pose(self, pose: Pose2d, camera_manager: CameraManager, node_state: NodeRegionState) -> Pose3d:
+        world_to_robot = Transform3d(Pose3d(), Pose3d(pose))
+        world_to_camera = world_to_robot + camera_manager.get_params().transform
+        node_region_camera_frame = (
+            Pose3d(node_state.node_region.position, Rotation3d()) + world_to_camera.inverse()
+        )
+
+        return node_region_camera_frame
+
 
     def find_visible_nodes(self, frame: np.ndarray, pose: Pose2d) -> list[NodeRegionObservation]:
         """Segment image to find visible nodes in a frame
 
         Args:
-            frame (np.ndarray): New camera frame containing nodes
-            pose (Pose2d): Current robot pose in the world frame
+            `frame` (np.ndarray): New camera frame containing nodes
+            `pose` (Pose2d): Current robot pose in the world frame
 
         Returns:
-            List[NodeRegionObservation]: List of node region observations with no information about occupancy
+            `List[NodeRegionObservation]`: List of node region observations with no information about occupancy
         """
 
         visible_nodes: list[NodeRegionObservation] = []
@@ -210,24 +228,21 @@ class Vision:
             # Check if node region is visble in any camera
             for camera_manager in self.cameras:
                 params = camera_manager.get_params()
-                if self.is_node_region_in_image(robot_pose, params, node_state.node_region):        
+                if self.is_node_region_in_image(pose, params, node_state.node_region):        
                     # create transform to make camera origin
-                    # TODO: make transform pose a function
-                    world_to_robot = Transform3d(Pose3d(), Pose3d(robot_pose))
-                    world_to_camera = world_to_robot + camera_params.transform
-                    node_region_camera_frame = (
-                        Pose3d(node_region.position, Rotation3d()) + world_to_camera.inverse()
-                    )
-                    node_position = node_region_camera_frame.translation()
+                    node_region = self.transform_pose(pose, camera_manager, node_state)
+                    node_position = node_region.translation()
 
                     # Get image coordinates of centre of node region
-                    x_coord = params.width/2 + node_position.y * params.get_fx() / node_position.x 
-                    y_coord = params.height/2 + node_position.z * params.get_fy() / node_position.x
-                    # TODO: distort point as above coordinates are calculated for projection into undistorted image frame
-                    coords = (int(x_coord), int(y_coord))
+                    # x_coord = params.width/2 + coords[0].y * params.get_fx() / coords[0].x 
+                    # y_coord = params.height/2 + coords[0].z * params.get_fy() / coords[0].x
+
+                    coords = cv2.projectPoints(objectPoints=[node_region], rvec=params.transform.rotation(), tvec=params.transform.translation(), cameraMatrix=CAMERA_MATRIX)
+                    # TODO: check if this is the right use of cv2.projectPoints
+                    coord = (int(coords[0].x), int(coords[0].y))
 
                     # Calculate bounding box
-                    bb = self.calculate_bounding_box(coords, node_position, params)
+                    bb = self.calculate_bounding_box(coord, node_position, params)
                     visible_nodes.append(NodeRegionObservation(camera_manager.get_id(), bb, node_state.node_region))
 
         return visible_nodes

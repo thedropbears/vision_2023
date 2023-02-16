@@ -16,6 +16,9 @@ CUBE_HSV_HIGH = np.array([(185 / 240) * 180, (240 / 240) * 255, (225 / 240) * 25
 CONE_HEIGHT = 0.33
 CUBE_HEIGHT = 0.24
 
+CONE_WIDTH = 0.21
+CUBE_WIDTH = CUBE_HEIGHT
+
 CONTOUR_TO_BOUNDING_BOX_AREA_RATIO_THRESHOLD = 0.1
 
 # Gate angle to determine if robot can even see the node or not to avoid projecting backwards
@@ -27,6 +30,23 @@ ROBOT_BASE_TO_CAMERA_TRANSFORMATION = Transform3d(
     ROBOT_BASE_TO_CAMERA_TRANSLATION, ROBOT_BASE_TO_CAMERA_ROTATION
 )
 
-CAMERA_MATRIX = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+CAMERA_MATRIX = np.array([
+    [
+        [
+            950.0960104757881,
+            0,
+            629.0702597777629
+        ],
+        [
+            0,
+            949.2742671058766,
+            348.4667207420139
+        ],
+        [
+            0,
+            0,
+            1
+        ]
+    ]])
 
 BOUNDING_BOX_SIZE = 20
