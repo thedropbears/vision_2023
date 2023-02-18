@@ -8,7 +8,6 @@ import numpy as np
 from camera_config import CameraParams
 from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Rotation2d, Pose2d
 
-
 def read_test_data_csv(fname: str):
     with open(fname) as f:
         result = []
@@ -65,6 +64,7 @@ def test_sample_images(
     x2: int,
     y2: int,
 ):
+
     image = cv2.imread(f"./test/{filename}")
     assert image is not None
     bounding_box = BoundingBox(x1, y1, x2, y2)
