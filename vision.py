@@ -284,52 +284,51 @@ class Vision:
         pass
 
 
-    def is_node_region_in_image(
-        self,
-        robot_pose: Pose2d,
-        camera_params: CameraParams,
-        node_region: NodeRegion,
-    ) -> bool:
+def is_node_region_in_image(
+    robot_pose: Pose2d,
+    camera_params: CameraParams,
+    node_region: NodeRegion,
+) -> bool:
 
-        # create transform to make camera origin
-        world_to_robot = Transform3d(Pose3d(), Pose3d(robot_pose))
-        world_to_camera = world_to_robot + camera_params.transform
-        node_region_camera_frame = (
-            Pose3d(node_region.position, Rotation3d()) + world_to_camera.inverse()
+    # create transform to make camera origin
+    world_to_robot = Transform3d(Pose3d(), Pose3d(robot_pose))
+    world_to_camera = world_to_robot + camera_params.transform
+    node_region_camera_frame = (
+        Pose3d(node_region.position, Rotation3d()) + world_to_camera.inverse()
+    )
+
+    # Check the robot is facing the right direction for the point by checking it is inside the FOV
+    return point3d_in_field_of_view(
+        node_region_camera_frame.translation(), camera_params
+    )
+
+
+def point3d_in_field_of_view(point: Translation3d, camera_params: CameraParams) -> bool:
+    """Determines if a point in 3d space relative to the camera coordinate frame is visible in a camera's field of view
+
+    Args:
+        point (Translation3d): _point in 3d space relative to a camera
+        camera_params (CameraParams): camera parameters structure providing information about a frame being processed
+
+    Returns:
+        bool: if point is visible
+    """
+    vertical_angle = atan2(point.z, point.x)
+    horizontal_angle = atan2(point.y, point.x)
+
+    return (
+        (point.x > 0)
+        and (
+            -camera_params.get_vertical_fov() / 2
+            < vertical_angle
+            < camera_params.get_vertical_fov() / 2
         )
-
-        # Check the robot is facing the right direction for the point by checking it is inside the FOV
-        return self.point3d_in_field_of_view(
-            node_region_camera_frame.translation(), camera_params
+        and (
+            -camera_params.get_horizontal_fov() / 2
+            < horizontal_angle
+            < camera_params.get_horizontal_fov() / 2
         )
-
-
-    def point3d_in_field_of_view(self, point: Translation3d, camera_params: CameraParams) -> bool:
-        """Determines if a point in 3d space relative to the camera coordinate frame is visible in a camera's field of view
-
-        Args:
-            point (Translation3d): _point in 3d space relative to a camera
-            camera_params (CameraParams): camera parameters structure providing information about a frame being processed
-
-        Returns:
-            bool: if point is visible
-        """
-        vertical_angle = atan2(point.z, point.x)
-        horizontal_angle = atan2(point.y, point.x)
-
-        return (
-            (point.x > 0)
-            and (
-                -camera_params.get_vertical_fov() / 2
-                < vertical_angle
-                < camera_params.get_vertical_fov() / 2
-            )
-            and (
-                -camera_params.get_horizontal_fov() / 2
-                < horizontal_angle
-                < camera_params.get_horizontal_fov() / 2
-            )
-        )
+    )
 
 
 if __name__ == "__main__":

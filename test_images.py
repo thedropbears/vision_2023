@@ -7,6 +7,9 @@ from node_map import NodeRegionMap
 import numpy as np
 from camera_config import CameraParams
 from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Rotation2d, Pose2d
+from vision import Vision
+import camera_manager
+import connection
 
 def read_test_data_csv(fname: str):
     with open(fname) as f:
@@ -54,6 +57,7 @@ node_region_in_frame_images = read_node_region_in_frame_csv(
 )
 
 
+
 @pytest.mark.parametrize("filename,cone_present,cube_present,x1,y1,x2,y2", images)
 def test_sample_images(
     filename: str,
@@ -63,9 +67,11 @@ def test_sample_images(
     y1: int,
     x2: int,
     y2: int,
-):
-
+):   
     image = cv2.imread(f"./test/{filename}")
+    cam_list : list[camera_manager.MockImageManager] = [camera_manager.MockImageManager(image)]
+    vision = Vision(cam_list,connection.DummyConnection())
+
     assert image is not None
     bounding_box = BoundingBox(x1, y1, x2, y2)
     if cone_present:
@@ -152,6 +158,7 @@ def test_is_node_region_in_image(
 
 
 def test_point_3d_in_field_of_view():
+
     # create dummy camera matrix
     extrinsic_robot_to_camera = Transform3d(
         Translation3d(0.0, 0.0, 0.0), Rotation3d(0, 0, 0)
