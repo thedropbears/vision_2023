@@ -177,16 +177,17 @@ class Vision:
 
         # Get gamepiece size in pixels
         
+        #TODO Use intrinsic matrix to get the values
         horizontal_pixels = (1. / 950.0960104757881) / camera_params.width
         vertical_pixels   = (1. / 949.2742671058766) / camera_params.height
 
         gp_width = gp_width * horizontal_pixels
         gp_height = gp_height * vertical_pixels
 
-        x1 = centre(0) - gp_width  / 2
-        y1 = centre(1) - gp_height / 2
-        x2 = centre(0) + gp_width  / 2
-        y2 = centre(1) + gp_height / 2
+        x1 : float = centre(0) - gp_width  / 2
+        y1 : float = centre(1) - gp_height / 2
+        x2 : float = centre(0) + gp_width  / 2
+        y2 : float = centre(1) + gp_height / 2
 
         # Check against bounds of image
         if x1 < 0:
@@ -228,7 +229,7 @@ class Vision:
             # Check if node region is visble in any camera
             for camera_manager in self.cameras:
                 params = camera_manager.get_params()
-                if self.is_node_region_in_image(pose, params, node_state.node_region):        
+                if is_node_region_in_image(pose, params, node_state.node_region):        
                     # create transform to make camera origin
                     node_region = self.transform_pose(pose, camera_manager, node_state)
                     node_position = node_region.translation()
