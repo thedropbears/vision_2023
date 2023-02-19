@@ -24,7 +24,7 @@ class CameraManager:
         self.cs = CameraServer.getInstance()
 
         self.camera_id = camera_id
-        
+
         self.params = params
 
         self.camera = self.cs.startAutomaticCapture(name=params.name, path=path)
@@ -60,7 +60,7 @@ class CameraManager:
         self.set_camera_property("raw_brightness", 127)
 
     def get_id(self) -> int:
-        """ Get the unique camera id
+        """Get the unique camera id
         Returns:
             int
         """
@@ -110,13 +110,16 @@ class CameraManager:
 
 
 class MockImageManager:
-    def __init__(self, image: np.ndarray, display_output: bool = False) -> None:
+    def __init__(
+        self, image: np.ndarray, params: CameraParams, display_output: bool = False
+    ) -> None:
         """Initialises a Mock Image Manager
         Args:
             image: A BGR numpy image array
         """
         self.image = image
         self.display_output = display_output
+        self.params = params
 
     def change_image(self, new_image: np.ndarray) -> None:
         """Changes self.image.
@@ -150,6 +153,9 @@ class MockImageManager:
 
     def set_camera_property(self, property, value) -> None:
         pass
+
+    def get_params(self) -> CameraParams:
+        return self.params
 
 
 class MockVideoManager:

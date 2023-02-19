@@ -2,7 +2,12 @@ import csv
 import pytest
 import cv2
 import vision
-from helper_types import BoundingBox, ExpectedGamePiece, NodeRegionObservation
+from helper_types import (
+    BoundingBox,
+    ExpectedGamePiece,
+    NodeRegionObservation,
+    NodeRegion,
+)
 from node_map import NodeRegionMap
 import numpy as np
 from camera_config import CameraParams
@@ -54,25 +59,24 @@ def read_node_region_in_frame_csv(fname: str):
 
 
 def read_visible_node_json(fname: str):
+    result = []
     with open(fname) as f:
-        result = []
-        visible_nodes = []
         fjson = json.load(f)
 
-    for i in len(fjson["image"]["node"]):
-        visible_nodes.append(i["row"] * 9 + i["col"], i["contain"])
-
-    for image in fjson["img"]:
-        result.append(
-            (
-                image["img_name"],
-                image["location"]["x"],
-                image["location"]["y"],
-                image["img_name"]["z"],
-                image["img_name"]["omega"],
-                visible_nodes,
+        for image in fjson["img"]:
+            visible_nodes = []
+            for node in image["nodes"]:
+                visible_nodes.append((node["row"] * 9 + node["col"], node["contain"]))
+            result.append(
+                (
+                    image["img_name"],
+                    image["location"]["x"],
+                    image["location"]["y"],
+                    image["location"]["z"],
+                    image["location"]["omega"],
+                    visible_nodes,
+                )
             )
-        )
 
     return result
 
@@ -235,7 +239,7 @@ def test_point_3d_in_field_of_view():
 
 
 @pytest.mark.parametrize(
-    "image_name,robot_x,robot_y,robot_z,heading,visible_nodes",
+    "image_name,robot_x,robot_y,robot_z,heading,json_visible_nodes",
     json_nodes,
 )
 def test_find_visible_nodes(
@@ -244,15 +248,41 @@ def test_find_visible_nodes(
     robot_y: float,
     robot_z: float,
     heading: float,
-    visible_nodes: tuple,
+    json_visible_nodes: tuple,
 ):
     visible_node: list[NodeRegionObservation] = []
     image = cv2.imread(f"./test/{image_name}")
 
+    extrinsic_robot_to_camera = Transform3d(
+        Translation3d(0.0, 0.0, 0.0), Rotation3d(0, 0, 0)
+    )
+    intrinsic_camera_matrix = np.array(
+        [
+            [1.12899023e03, 0.00000000e00, 6.34655248e02],
+            [0.00000000e00, 1.12747666e03, 3.46570772e02],
+            [0.00000000e00, 0.00000000e00, 1.00000000e00],
+        ]
+    )
+
+    camera_params = CameraParams(
+        "test_name", 1280, 720, extrinsic_robot_to_camera, intrinsic_camera_matrix, 30
+    )
+
     cam_list: list[camera_manager.MockImageManager] = [
-        camera_manager.MockImageManager(image)
+        camera_manager.MockImageManager(image, camera_params)
     ]
     vision = Vision(cam_list, connection.DummyConnection())
 
     robotpose = Pose2d(robot_x, robot_y, heading)
-    visible_node.append = vision.find_visible_nodes(image, robotpose)
+    observed_nodes = vision.find_visible_nodes(image, robotpose)
+    observed_nodes_id = []
+    for observed_node in observed_nodes:
+        observed_nodes_id.append(observed_node.node_region.id)
+
+    assert {
+        observed_nodes_id == json_visible_nodes[0]
+    }, "visible nodes all observed in test_find_visible_nodes"
+
+    assert {
+        observed_nodes_id != json_visible_nodes[0]
+    }, "visible nodes not fully observed in test_find_visible_nodes"
