@@ -2,7 +2,7 @@ import csv
 import pytest
 import cv2
 import vision
-from helper_types import BoundingBox, ExpectedGamePiece
+from helper_types import BoundingBox, ExpectedGamePiece, NodeRegionObservation
 from node_map import NodeRegionMap
 import numpy as np
 from camera_config import CameraParams
@@ -10,6 +10,8 @@ from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Rotation2d,
 from vision import Vision
 import camera_manager
 import connection
+import json
+
 
 def read_test_data_csv(fname: str):
     with open(fname) as f:
@@ -51,11 +53,36 @@ def read_node_region_in_frame_csv(fname: str):
     return result
 
 
+def read_visible_node_json(fname: str):
+    with open(fname) as f:
+        result = []
+        visible_nodes = []
+        fjson = json.load(f)
+
+    for i in len(fjson["image"]["node"]):
+        visible_nodes.append(i["row"] * 9 + i["col"], i["contain"])
+
+    for image in fjson["img"]:
+        result.append(
+            (
+                image["img_name"],
+                image["location"]["x"],
+                image["location"]["y"],
+                image["img_name"]["z"],
+                image["img_name"]["omega"],
+                visible_nodes,
+            )
+        )
+
+    return result
+
+
 images = read_test_data_csv("test/expected.csv")
 node_region_in_frame_images = read_node_region_in_frame_csv(
     "test/node_region_in_frame.csv"
 )
 
+json_nodes = read_visible_node_json("test/expected.json")
 
 
 @pytest.mark.parametrize("filename,cone_present,cube_present,x1,y1,x2,y2", images)
@@ -67,10 +94,13 @@ def test_sample_images(
     y1: int,
     x2: int,
     y2: int,
-):   
+):
     image = cv2.imread(f"./test/{filename}")
-    cam_list : list[camera_manager.MockImageManager] = [camera_manager.MockImageManager(image)]
-    vision = Vision(cam_list,connection.DummyConnection())
+
+    cam_list: list[camera_manager.MockImageManager] = [
+        camera_manager.MockImageManager(image)
+    ]
+    vision = Vision(cam_list, connection.DummyConnection())
 
     assert image is not None
     bounding_box = BoundingBox(x1, y1, x2, y2)
@@ -158,7 +188,6 @@ def test_is_node_region_in_image(
 
 
 def test_point_3d_in_field_of_view():
-
     # create dummy camera matrix
     extrinsic_robot_to_camera = Transform3d(
         Translation3d(0.0, 0.0, 0.0), Rotation3d(0, 0, 0)
@@ -203,3 +232,27 @@ def test_point_3d_in_field_of_view():
     assert (
         vision.point3d_in_field_of_view(point_behind_frame, camera_params) is False
     ), "point should not be in fov"
+
+
+@pytest.mark.parametrize(
+    "image_name,robot_x,robot_y,robot_z,heading,visible_nodes",
+    json_nodes,
+)
+def test_find_visible_nodes(
+    image_name: str,
+    robot_x: float,
+    robot_y: float,
+    robot_z: float,
+    heading: float,
+    visible_nodes: tuple,
+):
+    visible_node: list[NodeRegionObservation] = []
+    image = cv2.imread(f"./test/{image_name}")
+
+    cam_list: list[camera_manager.MockImageManager] = [
+        camera_manager.MockImageManager(image)
+    ]
+    vision = Vision(cam_list, connection.DummyConnection())
+
+    robotpose = Pose2d(robot_x, robot_y, heading)
+    visible_node.append = vision.find_visible_nodes(image, robotpose)
