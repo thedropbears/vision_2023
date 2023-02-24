@@ -1,18 +1,19 @@
 import csv
 import pytest
 import cv2
+from node_map import ALL_NODES
 import vision
 from helper_types import (
     BoundingBox,
-    ExpectedGamePiece,
-    NodeRegionObservation,
-    NodeRegion,
+    GamePiece,
+    NodeView,
+    Node,
 )
-from node_map import NodeRegionMap
+from magic_numbers import camera_params1
 import numpy as np
 from camera_config import CameraParams
 from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Rotation2d, Pose2d
-from vision import Vision
+from vision import GamePieceVision
 import camera_manager
 import connection
 import json
@@ -81,15 +82,12 @@ def read_visible_node_json(fname: str):
     return result
 
 
-images = read_test_data_csv("test/expected.csv")
-node_region_in_frame_images = read_node_region_in_frame_csv(
-    "test/node_region_in_frame.csv"
+classify_images = read_test_data_csv("test/expected.csv")
+
+
+@pytest.mark.parametrize(
+    "filename,cone_present,cube_present,x1,y1,x2,y2", classify_images
 )
-
-json_nodes = read_visible_node_json("test/expected.json")
-
-
-@pytest.mark.parametrize("filename,cone_present,cube_present,x1,y1,x2,y2", images)
 def test_sample_images(
     filename: str,
     cone_present: bool,
@@ -101,55 +99,54 @@ def test_sample_images(
 ):
     image = cv2.imread(f"./test/{filename}")
 
-    cam_list: list[camera_manager.MockImageManager] = [
-        camera_manager.MockImageManager(image)
-    ]
-    vision = Vision(cam_list, connection.DummyConnection())
+    cam_list: camera_manager.MockImageManager = camera_manager.MockImageManager(
+        image, camera_params1
+    )
+    vision = GamePieceVision(
+        cam_list, connection.DummyConnection(Pose2d(), False, False)
+    )
 
     assert image is not None
     bounding_box = BoundingBox(x1, y1, x2, y2)
     if cone_present:
         assert (
-            vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CONE)
-            is True
+            vision.is_game_piece_present(image, bounding_box, GamePiece.CONE) is True
         ), "Cone present in image but not found by detector"
 
         assert (
-            vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CUBE)
-            is False
+            vision.is_game_piece_present(image, bounding_box, GamePiece.CUBE) is False
         ), "Cone present in image but detector found cube"
 
         assert (
-            vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.BOTH)
-            is True
+            vision.is_game_piece_present(image, bounding_box, GamePiece.BOTH) is True
         ), "Cone present in image but detector found neither"
 
     if cube_present:
         assert (
-            vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CUBE)
-            is True
+            vision.is_game_piece_present(image, bounding_box, GamePiece.CUBE) is True
         ), "Cube present in image but not found by detector"
 
         assert (
-            vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CONE)
-            is False
+            vision.is_game_piece_present(image, bounding_box, GamePiece.CONE) is False
         ), "Cube present in image but detector found cube"
 
         assert (
-            vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.BOTH)
-            is True
+            vision.is_game_piece_present(image, bounding_box, GamePiece.BOTH) is True
         ), "Cube present in image but detector found neither"
 
     if not cube_present and not cone_present:
         assert (
-            vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CUBE)
-            is False
+            vision.is_game_piece_present(image, bounding_box, GamePiece.CUBE) is False
         ), "Nothing present in image but detector found cube"
 
         assert (
-            vision.is_game_piece_present(image, bounding_box, ExpectedGamePiece.CONE)
-            is False
+            vision.is_game_piece_present(image, bounding_box, GamePiece.CONE) is False
         ), "Nothing present in image but detector found cone"
+
+
+node_region_in_frame_images = read_node_region_in_frame_csv(
+    "test/node_region_in_frame.csv"
+)
 
 
 @pytest.mark.parametrize(
@@ -163,10 +160,11 @@ def test_is_node_region_in_image(
     heading: float,
     node_region_id: int,
 ):
-    node_region_map = NodeRegionMap(on_blue_alliance=True)
-
-    node_region = node_region_map.get_state()[node_region_id].node_region
-
+    matching_nodes = [x for x in ALL_NODES if x.id == node_region_id]
+    assert (
+        len(matching_nodes) == 1
+    ), f"Invalid node id {node_region_id}, matches: {len(matching_nodes)}"
+    node = matching_nodes[0]
     robot_pose = Pose2d(robot_x, robot_y, Rotation2d.fromDegrees(heading))
 
     extrinsic_robot_to_camera = Transform3d(
@@ -186,8 +184,7 @@ def test_is_node_region_in_image(
     )
 
     assert (
-        vision.is_node_region_in_image(robot_pose, camera_params, node_region)
-        == node_region_visible
+        vision.is_node_in_image(robot_pose, camera_params, node) == node_region_visible
     )
 
 
@@ -238,6 +235,9 @@ def test_point_3d_in_field_of_view():
     ), "point should not be in fov"
 
 
+json_nodes = read_visible_node_json("test/expected.json")
+
+
 @pytest.mark.parametrize(
     "image_name,robot_x,robot_y,robot_z,heading,json_visible_nodes",
     json_nodes,
@@ -250,7 +250,6 @@ def test_find_visible_nodes(
     heading: float,
     json_visible_nodes: tuple,
 ):
-    visible_node: list[NodeRegionObservation] = []
     image = cv2.imread(f"./test/{image_name}")
 
     extrinsic_robot_to_camera = Transform3d(
@@ -268,21 +267,18 @@ def test_find_visible_nodes(
         "test_name", 1280, 720, extrinsic_robot_to_camera, intrinsic_camera_matrix, 30
     )
 
-    cam_list: list[camera_manager.MockImageManager] = [
-        camera_manager.MockImageManager(image, camera_params)
-    ]
-    vision = Vision(cam_list, connection.DummyConnection())
+    cam = camera_manager.MockImageManager(image, camera_params)
+    vision = GamePieceVision(cam, connection.DummyConnection())
 
     robotpose = Pose2d(robot_x, robot_y, heading)
     observed_nodes = vision.find_visible_nodes(image, robotpose)
-    observed_nodes_id = []
-    for observed_node in observed_nodes:
-        observed_nodes_id.append(observed_node.node_region.id)
+    observed_nodes_id = [x.node.id for x in observed_nodes]
 
-    assert {
-        observed_nodes_id == json_visible_nodes[0]
-    }, "visible nodes all observed in test_find_visible_nodes"
+    # should_see_nodes = []
+    # assert {
+    #     all([node in json_visible_nodes[0]
+    # }, "visible nodes all observed in test_find_visible_nodes"
 
-    assert {
-        observed_nodes_id != json_visible_nodes[0]
-    }, "visible nodes not fully observed in test_find_visible_nodes"
+    # assert {
+    #     observed_nodes_id != json_visible_nodes[0]
+    # }, "visible nodes not fully observed in test_find_visible_nodes"

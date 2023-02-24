@@ -11,7 +11,7 @@ from magic_numbers import (
     CUBE_HEIGHT,
     CONE_WIDTH,
     CUBE_WIDTH,
-    camera_params1
+    camera_params1,
 )
 
 from math import atan2
@@ -213,13 +213,17 @@ class GamePieceVision:
             if is_node_in_image(robot_pose, params, node):
                 # Get image coordinates of centre of node region
                 coords, _ = cv2.projectPoints(
-                    objectPoints=np.array([[node.position.x, node.position.y, node.position.z]]),
+                    objectPoints=np.array(
+                        [[node.position.x, node.position.y, node.position.z]]
+                    ),
                     rvec=camera_pose.rotation().getQuaternion().toRotationVector(),
-                    tvec=np.array([
-                        camera_pose.translation().x,
-                        camera_pose.translation().y,
-                        camera_pose.translation().z,
-                    ]),
+                    tvec=np.array(
+                        [
+                            camera_pose.translation().x,
+                            camera_pose.translation().y,
+                            camera_pose.translation().z,
+                        ]
+                    ),
                     cameraMatrix=params.K,
                     distCoeffs=None,  # assumes no distiontion if empty
                 )

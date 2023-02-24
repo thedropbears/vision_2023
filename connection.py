@@ -7,13 +7,16 @@ NetworkTables = NetworkTablesInstance.getDefault()
 
 RIO_IP = "10.47.74.2"
 
+
 class BaseConnection(ABC):
     @abstractmethod
     def send_results(self, positive: list[int], negatives: list[int]) -> None:
         ...
+
     @abstractmethod
     def get_latest_pose(self) -> Pose2d:
         ...
+
     @abstractmethod
     def get_debug(self) -> bool:
         ...
@@ -24,7 +27,7 @@ class NTConnection(BaseConnection):
         inst.initialize(server=RIO_IP)
         self.inst = inst
 
-        nt = inst.getTable("/vision"+name)
+        nt = inst.getTable("/vision" + name)
         self.true_entry = nt.getEntry("results_true")
         self.false_entry = nt.getEntry("results_false")
         self.timestamp_entry = nt.getEntry("timestamp")
@@ -50,27 +53,35 @@ class NTConnection(BaseConnection):
         self.fps_entry.setDouble(fps)
 
         self.inst.flush()
-    
+
     def get_latest_pose(self) -> Pose2d:
         arr = self.pose_entry.getDoubleArray([0, 0, 0])
         return Pose2d(arr[0], arr[1], arr[2])
-    
+
     def get_debug(self) -> bool:
         return self.debug_entry.getBoolean(True)
 
+
 zero_pose = Pose2d()
+
+
 class DummyConnection(BaseConnection):
-    def __init__(self, pose = zero_pose, do_print = False, do_annotate = False):
+    def __init__(self, pose=zero_pose, do_print=False, do_annotate=False):
         self.pose = pose
         self.debug = do_annotate
         self.results = [[], []]
 
     def send_results(self, positives: list[int], negatives: list[int]) -> None:
         self.results = [positives, negatives]
-        print("results being sent, positive sightings:", positives, ", negative signtings:", negatives)
+        print(
+            "results being sent, positive sightings:",
+            positives,
+            ", negative signtings:",
+            negatives,
+        )
 
     def get_latest_pose(self) -> Pose2d:
         return self.pose
-    
+
     def get_debug(self) -> bool:
         return self.debug

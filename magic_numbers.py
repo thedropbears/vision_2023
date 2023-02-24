@@ -35,22 +35,11 @@ ROBOT_BASE_TO_CAMERA_TRANSFORMATION = Transform3d(
 
 CAMERA_MATRIX = np.array(
     [
-        [
-            950.0960104757881,
-            0.0,
-            629.0702597777629
-        ],
-        [
-            0.0,
-            949.2742671058766,
-            348.4667207420139
-        ],
-        [
-            0.0,
-            0.0,
-            1.0
-        ]
-    ])
+        [950.0960104757881, 0.0, 629.0702597777629],
+        [0.0, 949.2742671058766, 348.4667207420139],
+        [0.0, 0.0, 1.0],
+    ]
+)
 
 camera_rotation = Rotation3d(0, 0, math.pi)
 camera_translation = Translation3d(-0.5, 0, 0.3)
