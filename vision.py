@@ -1,64 +1,72 @@
-from camera_manager import CameraManager
-from connection import NTConnection
+import math
+from camera_manager import BaseCameraManager, CameraManager
+from connection import BaseConnection, NTConnection
 from magic_numbers import (
     CONTOUR_TO_BOUNDING_BOX_AREA_RATIO_THRESHOLD,
     CONE_HSV_HIGH,
     CONE_HSV_LOW,
     CUBE_HSV_HIGH,
     CUBE_HSV_LOW,
-    FRAME_WIDTH,
-    FRAME_HEIGHT,
     CONE_HEIGHT,
     CUBE_HEIGHT,
     CONE_WIDTH,
     CUBE_WIDTH,
-    CAMERA_MATRIX
+    camera_params1
 )
 
-from math import atan2, tan, pi
+from math import atan2
 import cv2
 import numpy as np
 from helper_types import (
-    NodeRegionObservation,
-    NodeRegion,
-    NodeRegionState,
-    ExpectedGamePiece,
+    NodeView,
+    Node,
+    NodeObservation,
+    GamePiece,
     BoundingBox,
 )
 from camera_config import CameraParams
-from node_map import NodeRegionMap
+from node_map import ALL_NODES
 from wpimath.geometry import Pose2d, Pose3d, Translation3d, Transform3d, Rotation3d
 
 
-class Vision:
-    def __init__(self, cameras: list[CameraManager], connection: NTConnection) -> None:
-        self.cameras = cameras
+class GamePieceVision:
+    def __init__(self, camera: BaseCameraManager, connection: BaseConnection) -> None:
+        self.camera = camera
         self.connection = connection
-        self.map = NodeRegionMap(on_blue_alliance=False)
 
     def run(self) -> None:
         """Main process function.
         Captures an image, processes the image, and sends results to the RIO.
         """
-        self.connection.pong()
-        for camera_manager in self.cameras:
-            frame_time, frame = camera_manager.get_frame()
-            # frame time is 0 in case of an error
-            if frame_time == 0:
-                camera_manager.notify_error(camera_manager.get_error())
-                return
+        frame_time, frame = self.camera.get_frame()
+        # frame time is 0 in case of an error
+        if frame_time == 0:
+            self.camera.notify_error(self.camera.get_error())
+            return
 
-            results, display = self.process_image(frame)
+        robot_pose = self.connection.get_latest_pose()
+        results, display = self.process_image(frame, robot_pose)
 
-            if results is not None:
-                # TODO send results to rio
-                pass
+        if results is not None:
+            # TODO send results to rio
+            pass
 
+        if self.connection.get_debug():
             # send image to display on driverstation
-            camera_manager.send_frame(display)
-            
-        self.connection.set_fps()
+            self.camera.send_frame(display)
 
+    def process_image(
+        self, frame: np.ndarray, pose: Pose2d
+    ) -> tuple[list[NodeObservation], np.ndarray]:
+        visible_nodes = self.find_visible_nodes(frame, pose)
+        print(visible_nodes)
+        node_states = self.detect_node_state(frame, visible_nodes)
+
+        # annotate frame
+        annotated_frame = self.annotate_image(frame, node_states)
+
+        # return state of map (state of all node regions) and annotated camera stream
+        return node_states, annotated_frame
 
     def is_coloured_game_piece(
         self,
@@ -67,7 +75,6 @@ class Vision:
         upper_colour: np.ndarray,
         bBox_area: int,
     ) -> bool:
-
         gamepiece_mask = cv2.inRange(masked_image, lower_colour, upper_colour)
 
         # get largest contour
@@ -84,14 +91,12 @@ class Vision:
         else:
             return False
 
-
     def is_game_piece_present(
         self,
         frame: np.ndarray,
         bounding_box: BoundingBox,
-        expected_game_piece: ExpectedGamePiece
+        expected_game_piece: GamePiece,
     ) -> bool:
-
         # draw bound box mask
         bBox_mask = np.zeros_like(frame)
         bBox_mask = cv2.rectangle(
@@ -108,8 +113,8 @@ class Vision:
         cube_present = False
         cone_present = False
         if (
-            expected_game_piece == ExpectedGamePiece.BOTH
-            or expected_game_piece == ExpectedGamePiece.CUBE
+            expected_game_piece == GamePiece.BOTH
+            or expected_game_piece == GamePiece.CUBE
         ):
             # run cube mask
             lower_purple = CUBE_HSV_LOW
@@ -119,8 +124,8 @@ class Vision:
             )
 
         if (
-            expected_game_piece == ExpectedGamePiece.BOTH
-            or expected_game_piece == ExpectedGamePiece.CONE
+            expected_game_piece == GamePiece.BOTH
+            or expected_game_piece == GamePiece.CONE
         ):
             # run cone mask
             lower_yellow = CONE_HSV_LOW
@@ -132,86 +137,63 @@ class Vision:
 
         return cone_present or cube_present
 
-
-    def process_image(self, frame: np.ndarray, pose: Pose2d):
-
-        # visible_nodes = self.find_visible_nodes(frame, pose)
-
-        # node_states = self.detect_node_state(frame, visible_nodes)
-
-        # whatever the update step is
-        # self.map.update(node_states)
-
-        # map_state = self.map.get_state()
-
-        # annotate frame
-        # annotated_frame = annotate_image(frame, map_state, node_states)
-
-        # return state of map (state of all node regions) and annotated camera stream
-        return
-
-
     def calculate_bounding_box(
         self,
         centre: tuple[int, int],
-        node_point: Translation3d,
-        expected_game_piece: ExpectedGamePiece,
-        camera_params: CameraParams
+        camera_pose: Pose3d,
+        node: Node,
+        params: CameraParams,
     ) -> BoundingBox:
-        """Determine appropriate bounding box based on location of game piece relative to camer     
+        """Determine appropriate bounding box based on location of game piece relative to camera
 
         Args:
             `centre` (tuple): x and y coordinates of centre of node in image frame
-            `node_point` (Translation3d): pose of node in camera frame
+            `camera_pose` (Translation3d): pose of the camera in the world frame
+            `node` (Node) What node it is
             `camera_params` (CameraParams): relevant camera parameters for node region observation
 
         Returns:
             `BoundingBox`: bounding box within which a game piece is expected to be contained
         """
 
-        is_cube = expected_game_piece == ExpectedGamePiece.CUBE
-
+        is_cube = node.expected_game_piece == GamePiece.CUBE
         # Get max dimension of game piece
-        gp_height = CUBE_HEIGHT if is_cube else CONE_HEIGHT
-        gp_width = CUBE_WIDTH if is_cube else CONE_WIDTH
+        gp_height_m = CUBE_HEIGHT if is_cube else CONE_HEIGHT
+        gp_width_m = CUBE_WIDTH if is_cube else CONE_WIDTH
 
+        dist = camera_pose.translation().distance(node.position)
         # Get gamepiece size in pixels
-        
-        #TODO Use intrinsic matrix to get the values
-        horizontal_pixels = (1. / 950.0960104757881) / camera_params.width
-        vertical_pixels   = (1. / 949.2742671058766) / camera_params.height
+        gp_width = (gp_width_m / dist) * (params.width / params.get_fx()) * params.width
+        gp_height = (
+            (gp_height_m / dist) * (params.height / params.get_fy()) * params.height
+        )
 
-        gp_width = gp_width * horizontal_pixels
-        gp_height = gp_height * vertical_pixels
-
-        x1 : float = centre(0) - gp_width  / 2
-        y1 : float = centre(1) - gp_height / 2
-        x2 : float = centre(0) + gp_width  / 2
-        y2 : float = centre(1) + gp_height / 2
+        x1 = int(centre[0] - gp_width / 2)
+        y1 = int(centre[1] - gp_height / 2)
+        x2 = int(centre[0] + gp_width / 2)
+        y2 = int(centre[1] + gp_height / 2)
 
         # Check against bounds of image
         if x1 < 0:
             x1 = 0
         if y1 < 0:
             y1 = 0
-        if x2 > camera_params.width:
-            x2 = camera_params.width
-        if y2 > camera_params.height:
-            y2 = camera_params.height
+        if x2 > params.width:
+            x2 = params.width
+        if y2 > params.height:
+            y2 = params.height
 
         return BoundingBox(x1, y1, x2, y2)
 
-    def transform_pose(self, pose: Pose2d, camera_manager: CameraManager, node_state: NodeRegionState) -> Pose3d:
+    def get_camera_pose(self, pose: Pose2d, camera_params: CameraParams) -> Pose3d:
+        """Finds the pose of a node in the cameras coordinate frame"""
         world_to_robot = Transform3d(Pose3d(), Pose3d(pose))
-        world_to_camera = world_to_robot + camera_manager.get_params().transform
-        node_region_camera_frame = (
-            Pose3d(node_state.node_region.position, Rotation3d()) + world_to_camera.inverse()
-        )
+        world_to_camera = world_to_robot + camera_params.transform
+        return Pose3d() + world_to_camera
 
-        return node_region_camera_frame
-
-
-    def find_visible_nodes(self, frame: np.ndarray, pose: Pose2d) -> list[NodeRegionObservation]:
+    def find_visible_nodes(
+        self, frame: np.ndarray, robot_pose: Pose2d
+    ) -> list[NodeView]:
         """Segment image to find visible nodes in a frame
 
         Args:
@@ -219,41 +201,39 @@ class Vision:
             `pose` (Pose2d): Current robot pose in the world frame
 
         Returns:
-            `List[NodeRegionObservation]`: List of node region observations with no information about occupancy
+            `List[NodeView]`: List of node views with no information about occupancy
         """
+        params = self.camera.get_params()
+        camera_pose = self.get_camera_pose(robot_pose, params)
 
-        visible_nodes: list[NodeRegionObservation] = []
-
+        visible_nodes: list[NodeView] = []
         # Find visible nodes from node map
-        for node_state in self.map.get_state():
+        for node in ALL_NODES:
             # Check if node region is visble in any camera
-            for camera_manager in self.cameras:
-                params = camera_manager.get_params()
-                if is_node_region_in_image(pose, params, node_state.node_region):        
-                    # create transform to make camera origin
-                    node_region = self.transform_pose(pose, camera_manager, node_state)
-                    node_position = node_region.translation()
+            if is_node_in_image(robot_pose, params, node):
+                # Get image coordinates of centre of node region
+                coords, _ = cv2.projectPoints(
+                    objectPoints=np.array([[node.position.x, node.position.y, node.position.z]]),
+                    rvec=camera_pose.rotation().getQuaternion().toRotationVector(),
+                    tvec=np.array([
+                        camera_pose.translation().x,
+                        camera_pose.translation().y,
+                        camera_pose.translation().z,
+                    ]),
+                    cameraMatrix=params.K,
+                    distCoeffs=None,  # assumes no distiontion if empty
+                )
+                coord = (int(coords[0][0][0]), int(coords[0][0][1]))
 
-                    # Get image coordinates of centre of node region
-                    # x_coord = params.width/2 + coords[0].y * params.get_fx() / coords[0].x 
-                    # y_coord = params.height/2 + coords[0].z * params.get_fy() / coords[0].x
-
-                    coords = cv2.projectPoints(objectPoints=[node_region], rvec=params.transform.rotation(), tvec=params.transform.translation(), cameraMatrix=CAMERA_MATRIX)
-                    # TODO: check if this is the right use of cv2.projectPoints
-                    coord = (int(coords[0].x), int(coords[0].y))
-
-                    # Calculate bounding box
-                    bb = self.calculate_bounding_box(coord, node_position, params)
-                    visible_nodes.append(NodeRegionObservation(camera_manager.get_id(), bb, node_state.node_region))
+                # Calculate bounding box
+                bb = self.calculate_bounding_box(coord, camera_pose, node, params)
+                visible_nodes.append(NodeView(bb, node))
 
         return visible_nodes
 
-
     def detect_node_state(
-        self,
-        frame: np.ndarray,
-        regions_of_interest: list[NodeRegionObservation]
-    ) -> list[NodeRegionObservation]:
+        self, frame: np.ndarray, regions_of_interest: list[NodeView]
+    ) -> list[NodeObservation]:
         """Detect node occupancy in a set of observed node regions
 
         Args:
@@ -263,14 +243,18 @@ class Vision:
         Returns:
             List[NodeRegionObservation]: List of node region observations
         """
-        pass
-
+        observations = []
+        for view in regions_of_interest:
+            occupied = self.is_game_piece_present(
+                frame, view.bounding_box, view.node.expected_game_piece
+            )
+            observations.append(NodeObservation(view, occupied))
+        return observations
 
     def annotate_image(
         self,
         frame: np.ndarray,
-        map: list[NodeRegionState],
-        node_observations: list[NodeRegionObservation],
+        map: list[NodeObservation],
     ) -> np.ndarray:
         """annotate a frame with projected node points
 
@@ -282,15 +266,14 @@ class Vision:
         Returns:
             np.ndarray: frame annotated with observed node regions
         """
-        pass
+        return frame
 
 
-def is_node_region_in_image(
+def is_node_in_image(
     robot_pose: Pose2d,
     camera_params: CameraParams,
-    node_region: NodeRegion,
+    node_region: Node,
 ) -> bool:
-
     # create transform to make camera origin
     world_to_robot = Transform3d(Pose3d(), Pose3d(robot_pose))
     world_to_camera = world_to_robot + camera_params.transform
@@ -333,25 +316,16 @@ def point3d_in_field_of_view(point: Translation3d, camera_params: CameraParams) 
 
 
 if __name__ == "__main__":
-    # this is to run on the robot
-    # to run vision code on your laptop use sim.py
-    K = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])  # To update
-
-    params = CameraParams("Camera", FRAME_WIDTH, FRAME_HEIGHT, Translation3d(), K, 30)
-
-    cameras: list[CameraManager] = []
     left_camera = CameraManager(
-            0,
-            "/dev/video0",
-            params,
-            "kYUYV",
+        0,
+        "/dev/video0",
+        camera_params1,
+        "kYUYV",
     )
-    cameras.append(left_camera)
-    #  Setup camera managers for any other cameras and append to 'cameras'
 
-    vision = Vision(
-        cameras,
-        NTConnection(),
+    vision = GamePieceVision(
+        left_camera,
+        NTConnection("left_cam"),
     )
     while True:
         vision.run()
