@@ -2,9 +2,32 @@ import numpy as np
 import cv2
 from camera_config import CameraParams
 import sys
+from abc import ABC, abstractmethod
 
 
-class CameraManager:
+class BaseCameraManager(ABC):
+    @abstractmethod
+    def get_params(self) -> CameraParams:
+        ...
+
+    @abstractmethod
+    def get_frame(self) -> tuple[int, np.ndarray]:
+        ...
+
+    @abstractmethod
+    def send_frame(self, frame: np.ndarray) -> None:
+        ...
+
+    @abstractmethod
+    def get_error(self) -> str:
+        ...
+
+    @abstractmethod
+    def notify_error(self, error: str) -> None:
+        ...
+
+
+class CameraManager(BaseCameraManager):
     def __init__(
         self,
         camera_id: int,
@@ -21,13 +44,11 @@ class CameraManager:
         """
         from cscore import CameraServer, VideoMode
 
-        self.cs = CameraServer.getInstance()
-
         self.camera_id = camera_id
 
         self.params = params
 
-        self.camera = self.cs.startAutomaticCapture(name=params.name, path=path)
+        self.camera = CameraServer.startAutomaticCapture(name=params.name, path=path)
         self.camera.setVideoMode(
             getattr(VideoMode.PixelFormat, pixel_format),
             params.width,
@@ -38,8 +59,8 @@ class CameraManager:
         # In this, source and sink are inverted from the cscore documentation.
         # self.sink is a CvSource and self.sources are CvSinks. This is because it makes more sense for a reader.
         # We get images from a source, and put images to a sink.
-        self.source = self.cs.getVideo(camera=self.camera)
-        self.sink = self.cs.putVideo("Driver_Stream", params.width, params.height)
+        self.source = CameraServer.getVideo(camera=self.camera)
+        self.sink = CameraServer.putVideo("Driver_Stream", params.width, params.height)
         # Width and Height are reversed here because the order of putVideo's width and height
         # parameters are the opposite of numpy's (technically it is an array, not an actual image).
         self.frame = np.zeros(shape=(params.height, params.width, 3), dtype=np.uint8)
@@ -48,7 +69,7 @@ class CameraManager:
         self.set_camera_property("exposure_auto_priority", 0)
         self.set_camera_property("exposure_auto", 1)
         self.set_camera_property("focus_auto", 0)
-        self.set_camera_property("exposure_absolute", 1)
+        self.set_camera_property("exposure_absolute", 10)
         self.set_camera_property("raw_contrast", 255)
         self.set_camera_property("contrast", 100)
         self.set_camera_property("raw_saturation", 255)
@@ -105,11 +126,11 @@ class CameraManager:
         print(error, file=sys.stderr)
         self.sink.notifyError(error)
 
-    def set_camera_property(self, property, value) -> None:
+    def set_camera_property(self, property: str, value: int) -> None:
         self.camera.getProperty(property).set(value)
 
 
-class MockImageManager:
+class MockImageManager(BaseCameraManager):
     def __init__(
         self, image: np.ndarray, params: CameraParams, display_output: bool = False
     ) -> None:
@@ -151,14 +172,11 @@ class MockImageManager:
         """
         print(error, file=sys.stderr)
 
-    def set_camera_property(self, property, value) -> None:
-        pass
-
     def get_params(self) -> CameraParams:
         return self.params
 
 
-class MockVideoManager:
+class MockVideoManager(BaseCameraManager):
     def __init__(self, video: cv2.VideoCapture, display_output: bool = False):
         """Initialises a Mock Video Manager.
         Args:
@@ -195,12 +213,9 @@ class MockVideoManager:
         """
         print(error, file=sys.stderr)
 
-    def set_camera_property(self, property, value) -> None:
-        pass
 
-
-class WebcamCameraManager:
-    def __init__(self, camera: int = 0) -> None:
+class WebcamCameraManager(BaseCameraManager):
+    def __init__(self, camera: int, params: CameraParams) -> None:
         """Initialises a Webcam Camera Manager. Designed to run on a non-pi computer.
         Initialises it with the first detected system camera, for example a webcam.
 
@@ -208,6 +223,7 @@ class WebcamCameraManager:
             camera: Which camera to use. Default is 0th, probably a builtin webcam for most people.
         """
         self.video = cv2.VideoCapture(camera)
+        self.params = params
 
     def get_frame(self) -> tuple[int, np.ndarray]:
         """Returns the current video frame.
@@ -231,5 +247,5 @@ class WebcamCameraManager:
         """
         print(error, file=sys.stderr)
 
-    def set_camera_property(self, property, value) -> None:
-        pass
+    def get_params(self) -> CameraParams:
+        return self.params
