@@ -3,7 +3,7 @@ from enum import Enum
 from wpimath.geometry import Translation3d
 
 
-class ExpectedGamePiece(Enum):
+class GamePiece(Enum):
     CONE = 1
     CUBE = 2
     BOTH = 3
@@ -21,20 +21,21 @@ class BoundingBox:
 
 
 @dataclass
-class NodeRegion:
+class Node:
     id: int
-    expected_game_piece: ExpectedGamePiece
+    expected_game_piece: GamePiece
     position: Translation3d
 
 
 @dataclass
-class NodeRegionObservation:
-    camera_id: int
+class NodeView:
+    """A node in a camera"""
     bounding_box: BoundingBox
-    node_region: NodeRegion
+    node: Node
 
 
 @dataclass
-class NodeRegionState:
-    node_region: NodeRegion
+class NodeObservation:
+    """An node view and its state"""
+    view: NodeView
     occupied: bool = False
