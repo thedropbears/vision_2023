@@ -59,9 +59,8 @@ class GamePieceVision:
         self, frame: np.ndarray, pose: Pose2d
     ) -> tuple[list[NodeObservation], np.ndarray]:
         visible_nodes = self.find_visible_nodes(frame, pose)
-        print(visible_nodes)
         node_states = self.detect_node_state(frame, visible_nodes)
-
+        print(f"seeing {len(node_states)} nodes from {pose}")
         # annotate frame
         annotated_frame = self.annotate_image(frame, node_states)
 
@@ -258,7 +257,7 @@ class GamePieceVision:
     def annotate_image(
         self,
         frame: np.ndarray,
-        map: list[NodeObservation],
+        observations: list[NodeObservation],
     ) -> np.ndarray:
         """annotate a frame with projected node points
 
@@ -270,6 +269,10 @@ class GamePieceVision:
         Returns:
             np.ndarray: frame annotated with observed node regions
         """
+        for node in observations:
+            col = (0, 255, 0) if node.occupied else (0, 0, 255)
+            bb = node.view.bounding_box
+            cv2.rectangle(frame, [bb.x1, bb.y1], [bb.x2, bb.y2], col, 2)
         return frame
 
 

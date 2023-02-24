@@ -1,3 +1,4 @@
+import math
 import time
 from wpimath.geometry import Pose2d
 from networktables import NetworkTablesInstance
@@ -5,7 +6,7 @@ from abc import ABC, abstractmethod
 
 NetworkTables = NetworkTablesInstance.getDefault()
 
-RIO_IP = "10.47.74.2"
+RIO_IP = "127.0.0.1" #"10.47.74.2"
 
 
 class BaseConnection(ABC):
@@ -56,10 +57,11 @@ class NTConnection(BaseConnection):
 
     def get_latest_pose(self) -> Pose2d:
         arr = self.pose_entry.getDoubleArray([0, 0, 0])
-        return Pose2d(arr[0], arr[1], arr[2])
+        return Pose2d(arr[0], arr[1], math.radians(arr[2]))
 
     def get_debug(self) -> bool:
-        return self.debug_entry.getBoolean(True)
+        # return self.debug_entry.getBoolean(True)
+        return True
 
 
 zero_pose = Pose2d()
