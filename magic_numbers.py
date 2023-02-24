@@ -1,6 +1,9 @@
+import math
 import numpy as np
 from math import pi
-from wpimath.geometry import Translation3d, Rotation3d, Transform3d
+from wpimath.geometry import Translation3d, Rotation3d, Transform3d, Pose3d
+
+from camera_config import CameraParams
 
 # Camera settings
 FRAME_WIDTH = 320
@@ -30,23 +33,32 @@ ROBOT_BASE_TO_CAMERA_TRANSFORMATION = Transform3d(
     ROBOT_BASE_TO_CAMERA_TRANSLATION, ROBOT_BASE_TO_CAMERA_ROTATION
 )
 
-CAMERA_MATRIX = np.array([
+CAMERA_MATRIX = np.array(
     [
         [
             950.0960104757881,
-            0,
+            0.0,
             629.0702597777629
         ],
         [
-            0,
+            0.0,
             949.2742671058766,
             348.4667207420139
         ],
         [
-            0,
-            0,
-            1
+            0.0,
+            0.0,
+            1.0
         ]
-    ]])
+    ])
 
-BOUNDING_BOX_SIZE = 20
+camera_rotation = Rotation3d(0, 0, math.pi)
+camera_translation = Translation3d(-0.5, 0, 0.3)
+camera_params1 = CameraParams(
+    "Camera",
+    FRAME_WIDTH,
+    FRAME_HEIGHT,
+    Transform3d(Pose3d(), Pose3d(camera_translation, camera_rotation)),
+    CAMERA_MATRIX,
+    30,
+)
