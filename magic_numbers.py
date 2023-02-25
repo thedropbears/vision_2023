@@ -42,7 +42,7 @@ CAMERA_MATRIX = np.array(
 )
 
 camera_rotation = Rotation3d(0, 0, math.pi)
-camera_translation = Translation3d(-0.5, 0, 0.3)
+camera_translation = Translation3d(3.01, 2.33, 1.1)
 camera_params1 = CameraParams(
     "Camera",
     FRAME_WIDTH,

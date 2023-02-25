@@ -17,6 +17,7 @@ from vision import GamePieceVision
 import camera_manager
 import connection
 import json
+import math
 
 
 def read_test_data_csv(fname: str):
@@ -258,10 +259,10 @@ def test_find_visible_nodes(
     heading: float,
     json_visible_nodes: tuple,
 ):
-    image = cv2.imread(f"./test/{image_name}")
+    image = cv2.imread(f"./test/test_images/{image_name}")
 
     extrinsic_robot_to_camera = Transform3d(
-        Translation3d(0.0, 0.0, 0.0), Rotation3d(0, 0, 0)
+        Translation3d(robot_x, robot_y, robot_z), Rotation3d(0, 0, math.radians(heading))
     )
     intrinsic_camera_matrix = np.array(
         [
@@ -278,14 +279,13 @@ def test_find_visible_nodes(
     cam = camera_manager.MockImageManager(image, camera_params)
     vision = GamePieceVision(cam, connection.DummyConnection())
 
-    robotpose = Pose2d(robot_x, robot_y, heading)
-    observed_nodes = vision.find_visible_nodes(image, robotpose)
+    observed_nodes = vision.find_visible_nodes(image, Pose2d())
     observed_nodes_ids = [x.node.id for x in observed_nodes]
 
     should_see_nodes = [n[0] for n in json_visible_nodes]
     print(should_see_nodes, observed_nodes_ids)
     assert (
-        all([seen_node in should_see_nodes for seen_node in observed_nodes_ids])
+        all([seen_node in observed_nodes_ids for seen_node in should_see_nodes])
     ), "visible nodes all observed in test_find_visible_nodes"
 
     # assert {

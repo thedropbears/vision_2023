@@ -1,4 +1,3 @@
-import math
 from camera_manager import BaseCameraManager, CameraManager
 from connection import BaseConnection, NTConnection
 from magic_numbers import (
@@ -184,11 +183,10 @@ class GamePieceVision:
 
         return BoundingBox(x1, y1, x2, y2)
 
-    def get_camera_pose(self, pose: Pose2d, camera_params: CameraParams) -> Pose3d:
-        """Finds the pose of a node in the cameras coordinate frame"""
-        world_to_robot = Transform3d(Pose3d(), Pose3d(pose))
-        world_to_camera = world_to_robot + camera_params.transform
-        return Pose3d() + world_to_camera
+    @staticmethod
+    def get_camera_pose(pose: Pose2d, camera_params: CameraParams) -> Pose3d:
+        """Return pose of camera-center in world's reference frame"""
+        return Pose3d(pose) + camera_params.transform
 
     def find_visible_nodes(
         self, frame: np.ndarray, robot_pose: Pose2d
@@ -209,28 +207,31 @@ class GamePieceVision:
         # Find visible nodes from node map
         for node in ALL_NODES:
             # Check if node region is visble in any camera
-            if is_node_in_image(robot_pose, params, node):
-                # Get image coordinates of centre of node region
-                coords, _ = cv2.projectPoints(
-                    objectPoints=np.array(
-                        [[node.position.x, node.position.y, node.position.z]]
-                    ),
-                    rvec=camera_pose.rotation().getQuaternion().toRotationVector(),
-                    tvec=np.array(
-                        [
-                            camera_pose.translation().x,
-                            camera_pose.translation().y,
-                            camera_pose.translation().z,
-                        ]
-                    ),
-                    cameraMatrix=params.K,
-                    distCoeffs=None,  # assumes no distiontion if empty
-                )
-                coord = (int(coords[0][0][0]), int(coords[0][0][1]))
+            if not is_node_in_image(robot_pose, params, node):
+                continue
+            print(node.id)
+            # Get image coordinates of centre of node region
+            coords, _ = cv2.projectPoints(
+                objectPoints=np.array(
+                    [[node.position.x, node.position.y, node.position.z]]
+                ),
+                rvec=camera_pose.rotation().getQuaternion().toRotationVector(),
+                tvec=np.array(
+                    [
+                        camera_pose.translation().x,
+                        camera_pose.translation().y,
+                        camera_pose.translation().z,
+                    ]
+                ),
+                cameraMatrix=params.K,
+                distCoeffs=None,  # assumes no distiontion if empty
+            )
+            coord = (int(coords[0][0][0]), int(coords[0][0][1]))
+            print("Coord:", coords)
 
-                # Calculate bounding box
-                bb = self.calculate_bounding_box(coord, camera_pose, node, params)
-                visible_nodes.append(NodeView(bb, node))
+            # Calculate bounding box
+            bb = self.calculate_bounding_box(coord, camera_pose, node, params)
+            visible_nodes.append(NodeView(bb, node))
 
         return visible_nodes
 
@@ -281,16 +282,11 @@ def is_node_in_image(
     camera_params: CameraParams,
     node_region: Node,
 ) -> bool:
-    # create transform to make camera origin
-    world_to_robot = Transform3d(Pose3d(), Pose3d(robot_pose))
-    world_to_camera = world_to_robot + camera_params.transform
-    node_region_camera_frame = (
-        Pose3d(node_region.position, Rotation3d()) + world_to_camera.inverse()
-    )
-
-    # Check the robot is facing the right direction for the point by checking it is inside the FOV
+    camera_pose = Pose3d(robot_pose) + camera_params.transform
+    world_to_camera = Transform3d(camera_pose, Pose3d())
+    node_in_camera = node_region.position.rotateBy(world_to_camera.rotation()) + world_to_camera.translation()
     return point3d_in_field_of_view(
-        node_region_camera_frame.translation(), camera_params
+        node_in_camera, camera_params
     )
 
 
