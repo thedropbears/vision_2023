@@ -208,6 +208,8 @@ def test_point_3d_in_field_of_view():
     # dummy points for in frame and out of frame
     # at 5m the range from the camera perspective is -2.83m to 2.83m horizontally and  1.6m to -1.6m vertically
     point_in_frame = Translation3d(5.0, 0.1, 0.1)
+    point_in_frame_left = Translation3d(5.0 , 2, 0)
+    point_in_frame_above = Translation3d(5.0 , 0, 1)
     point_left_of_frame = Translation3d(5.0, 3.0, 0)
     point_right_of_frame = Translation3d(5.0, -3.0, 0.0)
     point_above_frame = Translation3d(5.0, 0.0, 2.0)
@@ -217,6 +219,12 @@ def test_point_3d_in_field_of_view():
     # assert results from function based on points
     assert (
         vision.point3d_in_field_of_view(point_in_frame, camera_params) is True
+    ), "point should be in fov"
+    assert (
+        vision.point3d_in_field_of_view(point_in_frame_left, camera_params) is True
+    ), "point should be in fov"
+    assert (
+        vision.point3d_in_field_of_view(point_in_frame_above, camera_params) is True
     ), "point should be in fov"
     assert (
         vision.point3d_in_field_of_view(point_left_of_frame, camera_params) is False
@@ -261,7 +269,7 @@ def test_find_visible_nodes(
             [0.00000000e00, 1.12747666e03, 3.46570772e02],
             [0.00000000e00, 0.00000000e00, 1.00000000e00],
         ]
-    )
+    , dtype=np.float32)
 
     camera_params = CameraParams(
         "test_name", 1280, 720, extrinsic_robot_to_camera, intrinsic_camera_matrix, 30
@@ -272,12 +280,13 @@ def test_find_visible_nodes(
 
     robotpose = Pose2d(robot_x, robot_y, heading)
     observed_nodes = vision.find_visible_nodes(image, robotpose)
-    observed_nodes_id = [x.node.id for x in observed_nodes]
+    observed_nodes_ids = [x.node.id for x in observed_nodes]
 
-    # should_see_nodes = []
-    # assert {
-    #     all([node in json_visible_nodes[0]
-    # }, "visible nodes all observed in test_find_visible_nodes"
+    should_see_nodes = [n[0] for n in json_visible_nodes]
+    print(should_see_nodes, observed_nodes_ids)
+    assert (
+        all([seen_node in should_see_nodes for seen_node in observed_nodes_ids])
+    ), "visible nodes all observed in test_find_visible_nodes"
 
     # assert {
     #     observed_nodes_id != json_visible_nodes[0]

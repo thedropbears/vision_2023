@@ -6,8 +6,8 @@ from wpimath.geometry import Translation3d, Rotation3d, Transform3d, Pose3d
 from camera_config import CameraParams
 
 # Camera settings
-FRAME_WIDTH = 320
-FRAME_HEIGHT = 240
+FRAME_WIDTH = 1280
+FRAME_HEIGHT = 720
 
 # Target HSV for masking
 CONE_HSV_LOW = np.array([(28 / 240) * 180, (118 / 240) * 255, (107 / 240) * 255])
