@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 
 NetworkTables = NetworkTablesInstance.getDefault()
 
-RIO_IP = "127.0.0.1" #"10.47.74.2"
+RIO_IP = "127.0.0.1"  # "10.47.74.2"
 
 
 class BaseConnection(ABC):

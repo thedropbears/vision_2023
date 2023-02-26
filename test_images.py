@@ -12,7 +12,14 @@ from helper_types import (
 from magic_numbers import camera_params1
 import numpy as np
 from camera_config import CameraParams
-from wpimath.geometry import Transform3d, Translation3d, Rotation3d, Rotation2d, Pose2d
+from wpimath.geometry import (
+    Transform3d,
+    Translation3d,
+    Rotation3d,
+    Rotation2d,
+    Pose2d,
+    Pose3d,
+)
 from vision import GamePieceVision
 import camera_manager
 import connection
@@ -184,8 +191,10 @@ def test_is_node_region_in_image(
         "test_name", 1280, 720, extrinsic_robot_to_camera, intrinsic_camera_matrix, 30
     )
 
+    camera_pose = GamePieceVision.get_camera_pose(robot_pose, camera_params)
+
     assert (
-        vision.is_node_in_image(robot_pose, camera_params, node) == node_region_visible
+        vision.is_node_in_image(camera_pose, camera_params, node) == node_region_visible
     )
 
 
@@ -209,8 +218,8 @@ def test_point_3d_in_field_of_view():
     # dummy points for in frame and out of frame
     # at 5m the range from the camera perspective is -2.83m to 2.83m horizontally and  1.6m to -1.6m vertically
     point_in_frame = Translation3d(5.0, 0.1, 0.1)
-    point_in_frame_left = Translation3d(5.0 , 2, 0)
-    point_in_frame_above = Translation3d(5.0 , 0, 1)
+    point_in_frame_left = Translation3d(5.0, 2, 0)
+    point_in_frame_above = Translation3d(5.0, 0, 1)
     point_left_of_frame = Translation3d(5.0, 3.0, 0)
     point_right_of_frame = Translation3d(5.0, -3.0, 0.0)
     point_above_frame = Translation3d(5.0, 0.0, 2.0)
@@ -248,44 +257,44 @@ json_nodes = read_visible_node_json("test/expected.json")
 
 
 @pytest.mark.parametrize(
-    "image_name,robot_x,robot_y,robot_z,heading,json_visible_nodes",
+    "image_name,x,y,z,heading,json_visible_nodes",
     json_nodes,
 )
 def test_find_visible_nodes(
     image_name: str,
-    robot_x: float,
-    robot_y: float,
-    robot_z: float,
+    x: float,
+    y: float,
+    z: float,
     heading: float,
     json_visible_nodes: tuple,
 ):
     image = cv2.imread(f"./test/test_images/{image_name}")
 
-    extrinsic_robot_to_camera = Transform3d(
-        Translation3d(robot_x, robot_y, robot_z), Rotation3d(0, 0, math.radians(heading))
-    )
+    extrinsic_trans = Transform3d()
     intrinsic_camera_matrix = np.array(
         [
             [1.12899023e03, 0.00000000e00, 6.34655248e02],
             [0.00000000e00, 1.12747666e03, 3.46570772e02],
             [0.00000000e00, 0.00000000e00, 1.00000000e00],
-        ]
-    , dtype=np.float32)
+        ],
+        dtype=np.float32,
+    )
 
     camera_params = CameraParams(
-        "test_name", 1280, 720, extrinsic_robot_to_camera, intrinsic_camera_matrix, 30
+        "test_name", 1280, 720, extrinsic_trans, intrinsic_camera_matrix, 30
     )
 
     cam = camera_manager.MockImageManager(image, camera_params)
     vision = GamePieceVision(cam, connection.DummyConnection())
 
-    observed_nodes = vision.find_visible_nodes(image, Pose2d())
+    pose = Pose3d(Translation3d(x, y, z), Rotation3d(0, 0, math.radians(heading)))
+    observed_nodes = vision.find_visible_nodes(image, pose)
     observed_nodes_ids = [x.node.id for x in observed_nodes]
 
     should_see_nodes = [n[0] for n in json_visible_nodes]
     print(should_see_nodes, observed_nodes_ids)
-    assert (
-        all([seen_node in observed_nodes_ids for seen_node in should_see_nodes])
+    assert all(
+        [seen_node in observed_nodes_ids for seen_node in should_see_nodes]
     ), "visible nodes all observed in test_find_visible_nodes"
 
     # assert {

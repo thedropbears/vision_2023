@@ -25,13 +25,17 @@ from helper_types import (
 )
 from camera_config import CameraParams
 from node_map import ALL_NODES
-from wpimath.geometry import Pose2d, Pose3d, Translation3d, Transform3d, Rotation3d
+from wpimath.geometry import Pose2d, Pose3d, Translation3d, Transform3d
 
 
 class GamePieceVision:
     def __init__(self, camera: BaseCameraManager, connection: BaseConnection) -> None:
         self.camera = camera
         self.connection = connection
+
+        params = camera.get_params()
+        self.robot_to_camera = params.transform
+        self.camera_pose = Pose3d().transformBy(self.robot_to_camera)
 
     def run(self) -> None:
         """Main process function.
@@ -55,11 +59,12 @@ class GamePieceVision:
             self.camera.send_frame(display)
 
     def process_image(
-        self, frame: np.ndarray, pose: Pose2d
+        self, frame: np.ndarray, robot_pose: Pose2d
     ) -> tuple[list[NodeObservation], np.ndarray]:
-        visible_nodes = self.find_visible_nodes(frame, pose)
+        self.camera_pose = Pose3d(robot_pose).transformBy(self.robot_to_camera)
+        visible_nodes = self.find_visible_nodes(frame, self.camera_pose)
         node_states = self.detect_node_state(frame, visible_nodes)
-        print(f"seeing {len(node_states)} nodes from {pose}")
+        print(f"seeing {len(node_states)} nodes from {self.camera_pose}")
         # annotate frame
         annotated_frame = self.annotate_image(frame, node_states)
 
@@ -189,7 +194,7 @@ class GamePieceVision:
         return Pose3d(pose) + camera_params.transform
 
     def find_visible_nodes(
-        self, frame: np.ndarray, robot_pose: Pose2d
+        self, frame: np.ndarray, camera_pose: Pose3d
     ) -> list[NodeView]:
         """Segment image to find visible nodes in a frame
 
@@ -201,39 +206,30 @@ class GamePieceVision:
             `List[NodeView]`: List of node views with no information about occupancy
         """
         params = self.camera.get_params()
-        camera_pose = self.get_camera_pose(robot_pose, params)
+        nodes_in_camera = [node_to_camera(camera_pose, params, n) for n in ALL_NODES]
+        candidates = [(n, t) for (n, t) in zip(ALL_NODES, nodes_in_camera) if t.x > 0.0]
+        candidate_nodes, candidate_transls = zip(*candidates)
 
-        visible_nodes: list[NodeView] = []
-        # Find visible nodes from node map
-        for node in ALL_NODES:
-            # Check if node region is visble in any camera
-            if not is_node_in_image(robot_pose, params, node):
-                continue
-            print(node.id)
-            # Get image coordinates of centre of node region
-            coords, _ = cv2.projectPoints(
-                objectPoints=np.array(
-                    [[node.position.x, node.position.y, node.position.z]]
-                ),
-                rvec=camera_pose.rotation().getQuaternion().toRotationVector(),
-                tvec=np.array(
-                    [
-                        camera_pose.translation().x,
-                        camera_pose.translation().y,
-                        camera_pose.translation().z,
-                    ]
-                ),
-                cameraMatrix=params.K,
-                distCoeffs=None,  # assumes no distiontion if empty
+        projected, _ = cv2.projectPoints(
+            objectPoints=np.array(
+                [[-t.y, -t.z, t.x] for t in candidate_transls]
+            ),  # Opencv wants Z forward, we have X
+            rvec=np.array([0.0, 0.0, 0.0]),
+            tvec=np.array([0.0, 0.0, 0.0]),
+            cameraMatrix=params.K,
+            distCoeffs=None,
+        )
+        screen_bb = BoundingBox(0, 0, frame.shape[1], frame.shape[0])
+        bbs = (
+            self.calculate_bounding_box(c, self.camera_pose, n, params).intersection(
+                screen_bb
             )
-            coord = (int(coords[0][0][0]), int(coords[0][0][1]))
-            print("Coord:", coords)
+            for (c, n) in zip(projected[:, 0], candidate_nodes)
+        )
 
-            # Calculate bounding box
-            bb = self.calculate_bounding_box(coord, camera_pose, node, params)
-            visible_nodes.append(NodeView(bb, node))
-
-        return visible_nodes
+        return [
+            NodeView(bb, n) for (bb, n) in zip(bbs, candidate_nodes) if bb is not None
+        ]
 
     def detect_node_state(
         self, frame: np.ndarray, regions_of_interest: list[NodeView]
@@ -277,17 +273,25 @@ class GamePieceVision:
         return frame
 
 
-def is_node_in_image(
-    robot_pose: Pose2d,
+def node_to_camera(
+    camera_pose: Pose3d,
     camera_params: CameraParams,
-    node_region: Node,
-) -> bool:
-    camera_pose = Pose3d(robot_pose) + camera_params.transform
+    node: Node,
+) -> Translation3d:
     world_to_camera = Transform3d(camera_pose, Pose3d())
-    node_in_camera = node_region.position.rotateBy(world_to_camera.rotation()) + world_to_camera.translation()
-    return point3d_in_field_of_view(
-        node_in_camera, camera_params
+    return (
+        node.position.rotateBy(world_to_camera.rotation())
+        + world_to_camera.translation()
     )
+
+
+def is_node_in_image(
+    camera_pose: Pose3d,
+    camera_params: CameraParams,
+    node: Node,
+) -> bool:
+    node_in_camera = node_to_camera(camera_pose, camera_params, node)
+    return point3d_in_field_of_view(node_in_camera, camera_params)
 
 
 def point3d_in_field_of_view(point: Translation3d, camera_params: CameraParams) -> bool:
