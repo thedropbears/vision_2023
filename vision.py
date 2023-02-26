@@ -1,7 +1,7 @@
 from camera_manager import BaseCameraManager, CameraManager
 from connection import BaseConnection, NTConnection
 from magic_numbers import (
-    CONTOUR_TO_BOUNDING_BOX_AREA_RATIO_THRESHOLD,
+    COLOUR_AREA_TO_BOUNDING_BOX_THRESHOLD,
     CONE_HSV_HIGH,
     CONE_HSV_LOW,
     CUBE_HSV_HIGH,
@@ -76,23 +76,14 @@ class GamePieceVision:
         masked_image: np.ndarray,
         lower_colour: np.ndarray,
         upper_colour: np.ndarray,
-        bBox_area: int,
     ) -> bool:
         gamepiece_mask = cv2.inRange(masked_image, lower_colour, upper_colour)
-
-        # get largest contour
-        contours, hierarchy = cv2.findContours(
-            gamepiece_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
+        return (
+            np.count_nonzero(gamepiece_mask)
+            > masked_image.shape[0]
+            * masked_image.shape[1]
+            * COLOUR_AREA_TO_BOUNDING_BOX_THRESHOLD
         )
-        if len(contours) > 0:
-            # find largest contour in mask, use to compute minEnCircle
-            biggest_contour = max(contours, key=cv2.contourArea)
-            # get area of contour
-            area = cv2.contourArea(biggest_contour)
-            return area / bBox_area > CONTOUR_TO_BOUNDING_BOX_AREA_RATIO_THRESHOLD
-
-        else:
-            return False
 
     def is_game_piece_present(
         self,
@@ -100,93 +91,60 @@ class GamePieceVision:
         bounding_box: BoundingBox,
         expected_game_piece: GamePiece,
     ) -> bool:
-        # draw bound box mask
-        bBox_mask = np.zeros_like(frame)
-        bBox_mask = cv2.rectangle(
-            bBox_mask,
-            (bounding_box.x1, bounding_box.y1),
-            (bounding_box.x2, bounding_box.y2),
-            (255, 255, 255),
-            cv2.FILLED,
-        )
+        roi = frame[
+            bounding_box.y1 : bounding_box.y2, bounding_box.x1 : bounding_box.x2
+        ]
+        if roi.size == 0:
+            return False
+        roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
-        masked_image = cv2.bitwise_and(frame, bBox_mask)
-
-        hsv = cv2.cvtColor(masked_image, cv2.COLOR_BGR2HSV)
         cube_present = False
         cone_present = False
         if (
             expected_game_piece == GamePiece.BOTH
             or expected_game_piece == GamePiece.CUBE
         ):
-            # run cube mask
-            lower_purple = CUBE_HSV_LOW
-            upper_purple = CUBE_HSV_HIGH
             cube_present = self.is_coloured_game_piece(
-                hsv, lower_purple, upper_purple, bounding_box.area()
+                roi_hsv, CUBE_HSV_LOW, CUBE_HSV_HIGH
             )
 
         if (
-            expected_game_piece == GamePiece.BOTH
-            or expected_game_piece == GamePiece.CONE
-        ):
-            # run cone mask
-            lower_yellow = CONE_HSV_LOW
-            upper_yellow = CONE_HSV_HIGH
-
+            not cube_present and expected_game_piece == GamePiece.BOTH
+        ) or expected_game_piece == GamePiece.CONE:
             cone_present = self.is_coloured_game_piece(
-                hsv, lower_yellow, upper_yellow, bounding_box.area()
+                roi_hsv, CONE_HSV_LOW, CONE_HSV_HIGH
             )
 
         return cone_present or cube_present
 
     def calculate_bounding_box(
         self,
-        centre: tuple[int, int],
-        camera_pose: Pose3d,
+        transl: Translation3d,
         node: Node,
+        camera_pose: Pose3d,
         params: CameraParams,
     ) -> BoundingBox:
-        """Determine appropriate bounding box based on location of game piece relative to camera
-
-        Args:
-            `centre` (tuple): x and y coordinates of centre of node in image frame
-            `camera_pose` (Translation3d): pose of the camera in the world frame
-            `node` (Node) What node it is
-            `camera_params` (CameraParams): relevant camera parameters for node region observation
-
-        Returns:
-            `BoundingBox`: bounding box within which a game piece is expected to be contained
-        """
+        """Determine appropriate bounding box based on location of game piece relative to camera"""
 
         is_cube = node.expected_game_piece == GamePiece.CUBE
-        # Get max dimension of game piece
-        gp_height_m = CUBE_HEIGHT if is_cube else CONE_HEIGHT
-        gp_width_m = CUBE_WIDTH if is_cube else CONE_WIDTH
+        wmh = 0.5 * (CUBE_WIDTH if is_cube else CONE_WIDTH)
+        hmh = 0.5 * (CUBE_HEIGHT if is_cube else CONE_HEIGHT)
 
-        dist = camera_pose.translation().distance(node.position)
-        # Get gamepiece size in pixels
-        gp_width = (gp_width_m / dist) * (params.width / params.get_fx()) * params.width
-        gp_height = (
-            (gp_height_m / dist) * (params.height / params.get_fy()) * params.height
+        projected, _ = cv2.projectPoints(
+            objectPoints=np.array(
+                [
+                    [-transl.y - wmh, -transl.z - hmh, transl.x],
+                    [-transl.y + wmh, -transl.z + hmh, transl.x],
+                ]
+            ),
+            rvec=np.array([0.0, 0.0, 0.0]),
+            tvec=np.array([0.0, 0.0, 0.0]),
+            cameraMatrix=params.K,
+            distCoeffs=None,
         )
-
-        x1 = int(centre[0] - gp_width / 2)
-        y1 = int(centre[1] - gp_height / 2)
-        x2 = int(centre[0] + gp_width / 2)
-        y2 = int(centre[1] + gp_height / 2)
-
-        # Check against bounds of image
-        if x1 < 0:
-            x1 = 0
-        if y1 < 0:
-            y1 = 0
-        if x2 > params.width:
-            x2 = params.width
-        if y2 > params.height:
-            y2 = params.height
-
-        return BoundingBox(x1, y1, x2, y2)
+        x1, y1 = projected[0][0]
+        x2, y2 = projected[1][0]
+        return BoundingBox(int(x1), int(y1), int(x2), int(y2))
 
     @staticmethod
     def get_camera_pose(pose: Pose2d, camera_params: CameraParams) -> Pose3d:
@@ -200,7 +158,7 @@ class GamePieceVision:
 
         Args:
             `frame` (np.ndarray): New camera frame containing nodes
-            `pose` (Pose2d): Current robot pose in the world frame
+            `camera_pose` (Pose3d): Current camera pose in the world frame
 
         Returns:
             `List[NodeView]`: List of node views with no information about occupancy
@@ -208,27 +166,17 @@ class GamePieceVision:
         params = self.camera.get_params()
         nodes_in_camera = [node_to_camera(camera_pose, params, n) for n in ALL_NODES]
         candidates = [(n, t) for (n, t) in zip(ALL_NODES, nodes_in_camera) if t.x > 0.0]
-        candidate_nodes, candidate_transls = zip(*candidates)
 
-        projected, _ = cv2.projectPoints(
-            objectPoints=np.array(
-                [[-t.y, -t.z, t.x] for t in candidate_transls]
-            ),  # Opencv wants Z forward, we have X
-            rvec=np.array([0.0, 0.0, 0.0]),
-            tvec=np.array([0.0, 0.0, 0.0]),
-            cameraMatrix=params.K,
-            distCoeffs=None,
-        )
         screen_bb = BoundingBox(0, 0, frame.shape[1], frame.shape[0])
         bbs = (
-            self.calculate_bounding_box(c, self.camera_pose, n, params).intersection(
+            self.calculate_bounding_box(t, n, self.camera_pose, params).intersection(
                 screen_bb
             )
-            for (c, n) in zip(projected[:, 0], candidate_nodes)
+            for (n, t) in candidates
         )
 
         return [
-            NodeView(bb, n) for (bb, n) in zip(bbs, candidate_nodes) if bb is not None
+            NodeView(bb, n) for (bb, (n, _)) in zip(bbs, candidates) if bb is not None
         ]
 
     def detect_node_state(
@@ -260,8 +208,7 @@ class GamePieceVision:
 
         Args:
             frame (np.ndarray): raw image frame without annotation
-            map (List[NodeState]): current map state with information on occupancy state_
-            node_observations (List[NodeRegionObservation]): node observations in the current time step
+            observations (List[NodeRegionObservation]): node observations in the current time step
 
         Returns:
             np.ndarray: frame annotated with observed node regions

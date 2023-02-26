@@ -10,11 +10,11 @@ FRAME_WIDTH = 1280
 FRAME_HEIGHT = 720
 
 # Target HSV for masking
-CONE_HSV_LOW = np.array([(28 / 240) * 180, (118 / 240) * 255, (107 / 240) * 255])
-CONE_HSV_HIGH = np.array([(35 / 240) * 180, (240 / 240) * 255, (220 / 240) * 255])
+CONE_HSV_LOW = np.array([13, 115, 117])
+CONE_HSV_HIGH = np.array([49, 255, 255])
 
-CUBE_HSV_LOW = np.array([(160 / 240) * 180, (99 / 240) * 255, (59 / 240) * 255])
-CUBE_HSV_HIGH = np.array([(185 / 240) * 180, (240 / 240) * 255, (225 / 240) * 255])
+CUBE_HSV_LOW = np.array([93, 115, 117])
+CUBE_HSV_HIGH = np.array([143, 255, 255])
 
 CONE_HEIGHT = 0.33
 CUBE_HEIGHT = 0.24
@@ -22,7 +22,7 @@ CUBE_HEIGHT = 0.24
 CONE_WIDTH = 0.21
 CUBE_WIDTH = CUBE_HEIGHT
 
-CONTOUR_TO_BOUNDING_BOX_AREA_RATIO_THRESHOLD = 0.1
+COLOUR_AREA_TO_BOUNDING_BOX_THRESHOLD = 0.1
 
 # Gate angle to determine if robot can even see the node or not to avoid projecting backwards
 DIRECTION_GATE_ANGLE = pi

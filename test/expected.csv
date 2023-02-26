@@ -1,4 +1,4 @@
-test_images/conecube.jpg,True,False,575,150,730,1
+test_images/conecube.jpg,True,False,575,1,730,150
 test_images/gamecube.jpg,False,True,512,360,740,503
 test_images/gamecube.jpg,False,False,575,150,730,1
 test_images/midshelf.jpg,True,False,520,43,665,220

@@ -294,9 +294,52 @@ def test_find_visible_nodes(
     should_see_nodes = [n[0] for n in json_visible_nodes]
     print(should_see_nodes, observed_nodes_ids)
     assert all(
-        [seen_node in observed_nodes_ids for seen_node in should_see_nodes]
+        seen_node in observed_nodes_ids for seen_node in should_see_nodes
     ), "visible nodes all observed in test_find_visible_nodes"
 
     # assert {
     #     observed_nodes_id != json_visible_nodes[0]
     # }, "visible nodes not fully observed in test_find_visible_nodes"
+
+@pytest.mark.parametrize(
+    "image_name,x,y,z,heading,json_visible_nodes",
+    json_nodes,
+)
+def test_detect_node_state(
+    image_name: str,
+    x: float,
+    y: float,
+    z: float,
+    heading: float,
+    json_visible_nodes: tuple,
+):
+    image = cv2.imread(f"./test/test_images/{image_name}")
+
+    extrinsic_trans = Transform3d()
+    intrinsic_camera_matrix = np.array(
+        [
+            [1.12899023e03, 0.00000000e00, 6.34655248e02],
+            [0.00000000e00, 1.12747666e03, 3.46570772e02],
+            [0.00000000e00, 0.00000000e00, 1.00000000e00],
+        ],
+        dtype=np.float32,
+    )
+
+    camera_params = CameraParams(
+        "test_name", 1280, 720, extrinsic_trans, intrinsic_camera_matrix, 30
+    )
+
+    cam = camera_manager.MockImageManager(image, camera_params)
+    vision = GamePieceVision(cam, connection.DummyConnection())
+
+    pose = Pose3d(Translation3d(x, y, z), Rotation3d(0, 0, math.radians(heading)))
+    observed_nodes = vision.find_visible_nodes(image, pose)
+    observations = vision.detect_node_state(image, observed_nodes)
+
+    occupied_ids = [o.view.node.id for o in observations if o.occupied]
+    should_see_nodes = [n[0] for n in json_visible_nodes]
+    print(should_see_nodes, occupied_ids)
+    assert all(
+        seen_node in occupied_ids for seen_node in should_see_nodes
+    ), "occupied nodes all detected in test_detect_node_state"
+
