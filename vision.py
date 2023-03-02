@@ -64,7 +64,12 @@ class GamePieceVision:
         self.camera_pose = Pose3d(robot_pose).transformBy(self.robot_to_camera)
         visible_nodes = self.find_visible_nodes(frame, self.camera_pose)
         node_states = self.detect_node_state(frame, visible_nodes)
-        print(f"seeing {len(node_states)} nodes from {self.camera_pose}")
+
+        push: list[bytes] = []
+        for node_vision, state in zip(visible_nodes, node_states):
+            push.append(node_vision.node.id.to_bytes().hex() + list(state.occupied.to_bytes().hex())[1])
+        self.connection.set_value("/Vision/Field", "nodes", push)
+        # print(f"seeing {len(node_states)} nodes from {self.camera_pose}")
         # annotate frame
         annotated_frame = self.annotate_image(frame, node_states)
 
