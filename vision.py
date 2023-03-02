@@ -67,7 +67,10 @@ class GamePieceVision:
 
         push: list[bytes] = []
         for node_vision, state in zip(visible_nodes, node_states):
-            push.append(node_vision.node.id.to_bytes().hex() + list(state.occupied.to_bytes().hex())[1])
+            push.append(
+                node_vision.node.id.to_bytes().hex()
+                + list(state.occupied.to_bytes().hex())[1]
+            )
         self.connection.set_value("/Vision/Field", "nodes", push)
         # print(f"seeing {len(node_states)} nodes from {self.camera_pose}")
         # annotate frame

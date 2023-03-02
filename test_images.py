@@ -6,8 +6,6 @@ import vision
 from helper_types import (
     BoundingBox,
     GamePiece,
-    NodeView,
-    Node,
 )
 from magic_numbers import camera_params1
 import numpy as np
@@ -301,6 +299,7 @@ def test_find_visible_nodes(
     #     observed_nodes_id != json_visible_nodes[0]
     # }, "visible nodes not fully observed in test_find_visible_nodes"
 
+
 @pytest.mark.parametrize(
     "image_name,x,y,z,heading,json_visible_nodes",
     json_nodes,
@@ -342,4 +341,3 @@ def test_detect_node_state(
     assert all(
         seen_node in occupied_ids for seen_node in should_see_nodes
     ), "occupied nodes all detected in test_detect_node_state"
-

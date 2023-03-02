@@ -1,7 +1,5 @@
 from enum import Enum
 from helper_types import (
-    NodeObservation,
-    NodeView,
     Node,
     GamePiece,
 )

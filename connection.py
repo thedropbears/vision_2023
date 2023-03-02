@@ -1,7 +1,7 @@
 import math
 import time
 from wpimath.geometry import Pose2d
-from networktables import NetworkTablesInstance, NetworkTables, NetworkTable
+from networktables import NetworkTablesInstance, NetworkTables
 from abc import ABC, abstractmethod
 from typing import Any
 
