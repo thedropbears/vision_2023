@@ -3,7 +3,7 @@ import time
 from wpimath.geometry import Pose2d
 from ntcore import NetworkTableInstance
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Optional, List
 
 RIO_IP = "127.0.0.1"  # "10.47.74.2"
 
@@ -22,7 +22,7 @@ class BaseConnection(ABC):
         ...
 
     @abstractmethod
-    def set_value(self, subtable_key: str, key: str, value: Any) -> None:
+    def set_string_array(self, subtable_key: str, key: str, value: List[str]) -> None:
         ...
 
 
@@ -62,7 +62,7 @@ class NTConnection(BaseConnection):
 
         self.inst.flush()
 
-    def set_value(self, subtable_key: str, key: str, value: Any) -> None:
+    def set_string_array(self, subtable_key: str, key: str, value: List[str]) -> None:
         st = self.inst.getTable(subtable_key)
         st.getEntry(key).setDefaultValue(value)
 

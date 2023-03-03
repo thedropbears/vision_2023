@@ -26,6 +26,7 @@ from helper_types import (
 from camera_config import CameraParams
 from node_map import ALL_NODES
 from wpimath.geometry import Pose2d, Pose3d, Translation3d, Transform3d
+from typing import List
 
 
 class GamePieceVision:
@@ -65,13 +66,13 @@ class GamePieceVision:
         visible_nodes = self.find_visible_nodes(frame, self.camera_pose)
         node_states = self.detect_node_state(frame, visible_nodes)
 
-        push: list[bytes] = []
+        push: List[str] = []
         for node_vision, state in zip(visible_nodes, node_states):
             push.append(
                 node_vision.node.id.to_bytes(1, "big").hex()
                 + list(state.occupied.to_bytes(1, "big").hex())[1]
             )
-        self.connection.set_value(
+        self.connection.set_string_array(
             f"/Vision/{self.camera.get_params().name}", "nodes", push or [False]
         )
         # print(f"seeing {len(node_states)} nodes from {self.camera_pose}")
