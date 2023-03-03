@@ -31,7 +31,7 @@ class NTConnection(BaseConnection):
         inst.initialize(server=RIO_IP)
         self.inst = inst
 
-        nt = inst.getTable("/vision" + name)
+        nt = inst.getTable("/Vision" + name)
         self.true_entry = nt.getEntry("results_true")
         self.false_entry = nt.getEntry("results_false")
         self.timestamp_entry = nt.getEntry("timestamp")

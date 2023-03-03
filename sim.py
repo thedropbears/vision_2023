@@ -3,11 +3,12 @@ from connection import NTConnection
 from magic_numbers import camera_params1
 from vision import GamePieceVision as Vision
 
-left_camera = WebcamCameraManager(0, camera_params1)
+camera = WebcamCameraManager(0, camera_params1)
+
 connection = NTConnection("vision")
 
 vision = Vision(
-    left_camera,
+    camera,
     connection,
 )
 
