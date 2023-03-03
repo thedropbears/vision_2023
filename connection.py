@@ -1,9 +1,9 @@
 import math
 import time
 from wpimath.geometry import Pose2d
-from networktables import NetworkTablesInstance, NetworkTables
+from ntcore import NetworkTable, NetworkTableInstance
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Optional
 
 RIO_IP = "127.0.0.1"  # "10.47.74.2"
 
@@ -22,16 +22,20 @@ class BaseConnection(ABC):
         ...
 
     @abstractmethod
-    def set_value(self, key: str, value: Any) -> None:
+    def set_value(self, subtable_key: str, key: str, value: Any) -> None:
         ...
 
 
 class NTConnection(BaseConnection):
-    def __init__(self, name: str, inst: NetworkTablesInstance = NetworkTables) -> None:
-        inst.initialize(server=RIO_IP)
-        self.inst = inst
+    inst: NetworkTableInstance
 
-        nt = inst.getTable("/Vision" + name)
+    def __init__(self, name: str, inst: Optional[NetworkTableInstance] = None) -> None:
+        
+        self.inst = inst or NetworkTableInstance.getDefault()        # self.inst = inst
+        # self.in/st
+        topic = self.inst.getTopic("nodes")
+
+        nt = self.inst.getTable("Vision" + name)
         self.true_entry = nt.getEntry("results_true")
         self.false_entry = nt.getEntry("results_false")
         self.timestamp_entry = nt.getEntry("timestamp")
@@ -40,7 +44,7 @@ class NTConnection(BaseConnection):
         self.debug_entry = nt.getEntry("debug_stream")
         self.debug_entry.setBoolean(False)
 
-        pose_table = inst.getTable("/SmartDashboard/Field")
+        pose_table = self.inst.getTable("/SmartDashboard/Field")
         self.pose_entry = pose_table.getEntry("fused_pose")
 
         self.old_fps_time = 0.0
@@ -58,8 +62,9 @@ class NTConnection(BaseConnection):
 
         self.inst.flush()
 
-    def set_value(self, table_key: str, key: str, value: Any) -> None:
-        self.inst.getTable(table_key).putValue(key, value)
+    def set_value(self, subtable_key: str, key: str, value: Any) -> None:
+        st = self.inst.getTable(subtable_key)
+        st.getEntry(key).setDefaultValue(value)
 
     def get_latest_pose(self) -> Pose2d:
         arr = self.pose_entry.getDoubleArray([0, 0, 0])

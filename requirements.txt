@@ -1,6 +1,5 @@
 --find-links https://tortall.net/~robotpy/wheels/2023/raspbian/
 opencv-python
 pytest
-pynetworktables
 robotpy-cscore
 robotpy-wpimath
