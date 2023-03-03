@@ -1,7 +1,7 @@
 import math
 import time
 from wpimath.geometry import Pose2d
-from ntcore import NetworkTable, NetworkTableInstance
+from ntcore import NetworkTableInstance
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
@@ -30,10 +30,10 @@ class NTConnection(BaseConnection):
     inst: NetworkTableInstance
 
     def __init__(self, name: str, inst: Optional[NetworkTableInstance] = None) -> None:
-        
-        self.inst = inst or NetworkTableInstance.getDefault()        # self.inst = inst
+
+        self.inst = inst or NetworkTableInstance.getDefault()  # self.inst = inst
         # self.in/st
-        topic = self.inst.getTopic("nodes")
+        self.inst.getTopic("nodes")
 
         nt = self.inst.getTable("Vision" + name)
         self.true_entry = nt.getEntry("results_true")
