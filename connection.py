@@ -83,6 +83,7 @@ class DummyConnection(BaseConnection):
         self.pose = pose
         self.debug = do_annotate
         self.results = [[], []]
+        self.string_array = []
 
     def send_results(self, positives: list[int], negatives: list[int]) -> None:
         self.results = [positives, negatives]
@@ -98,3 +99,7 @@ class DummyConnection(BaseConnection):
 
     def get_debug(self) -> bool:
         return self.debug
+    
+    def set_string_array(self, subtable_key: str, key: str, value: List[str]) -> None:
+        self.string_array = value
+        print(f"Setting {subtable_key}/{key} to {value}")
