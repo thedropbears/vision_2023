@@ -99,7 +99,7 @@ class DummyConnection(BaseConnection):
 
     def get_debug(self) -> bool:
         return self.debug
-    
+
     def set_string_array(self, subtable_key: str, key: str, value: List[str]) -> None:
         self.string_array = value
         print(f"Setting {subtable_key}/{key} to {value}")
