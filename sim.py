@@ -5,7 +5,7 @@ from vision import GamePieceVision as Vision
 
 camera = WebcamCameraManager(0, camera_params1)
 
-connection = NTConnection("vision")
+connection = NTConnection("left_cam", sim=True)
 
 vision = Vision(
     camera,

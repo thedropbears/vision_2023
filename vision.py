@@ -26,7 +26,7 @@ from helper_types import (
 from camera_config import CameraParams
 from node_map import ALL_NODES
 from wpimath.geometry import Pose2d, Pose3d, Translation3d, Transform3d
-
+from typing import List
 
 class GamePieceVision:
     def __init__(self, camera: BaseCameraManager, connection: BaseConnection) -> None:
@@ -46,7 +46,7 @@ class GamePieceVision:
         if frame_time == 0:
             self.camera.notify_error(self.camera.get_error())
             return
-
+        
         robot_pose = self.connection.get_latest_pose()
         results, display = self.process_image(frame, robot_pose)
 
@@ -65,16 +65,15 @@ class GamePieceVision:
         visible_nodes = self.find_visible_nodes(frame, self.camera_pose)
         node_states = self.detect_node_state(frame, visible_nodes)
 
-        push: list[str] = []
+        push: List[str] = []
         for node_vision, state in zip(visible_nodes, node_states):
             push.append(
                 node_vision.node.id.to_bytes(1, "big").hex()
                 + list(state.occupied.to_bytes(1, "big").hex())[1]
             )
-        self.connection.set_string_array(
-            f"/Vision/{self.camera.get_params().name}", "nodes", push or [False]
+        self.connection.set_nodes(
+            push or [""]
         )
-        # print(f"seeing {len(node_states)} nodes from {self.camera_pose}")
         # annotate frame
         annotated_frame = self.annotate_image(frame, node_states)
 
@@ -279,7 +278,7 @@ def point3d_in_field_of_view(point: Translation3d, camera_params: CameraParams) 
     )
 
 
-if __name__ == "__main__":
+def main():
     left_camera = CameraManager(
         0,
         "/dev/video0",
@@ -293,3 +292,6 @@ if __name__ == "__main__":
     )
     while True:
         vision.run()
+
+if __name__ == "__main__":
+    main()

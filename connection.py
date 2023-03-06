@@ -2,10 +2,24 @@ import math
 import time
 from wpimath.geometry import Pose2d
 from ntcore import NetworkTableInstance
-from abc import ABC, abstractmethod
-from typing import Optional
+from abc import ABC, abstractmethod, abstractproperty
+from typing import Optional, List, Any
+from cscore import CameraServer
+import cscore
 
-RIO_IP = "127.0.0.1"  # "10.47.74.2"
+
+RIO_IP = {
+    True: "127.0.0.1",
+    False: "10.47.74.2"  
+}
+
+def nt_data_to_node_data(self, data: list[str]) -> list[tuple[int, bool]]:
+        nodes: list[tuple[int, bool]] = []
+        for node in data:
+            as_array = str(node)
+            a = (int(f"{as_array[0]}{as_array[1]}"), as_array[2] == "1")
+            nodes.append(a)
+        return nodes
 
 
 class BaseConnection(ABC):
@@ -22,20 +36,19 @@ class BaseConnection(ABC):
         ...
 
     @abstractmethod
-    def set_string_array(self, subtable_key: str, key: str, value: list[str]) -> None:
+    def set_nodes(self, value: list[str]) -> None:
         ...
 
 
 class NTConnection(BaseConnection):
     inst: NetworkTableInstance
 
-    def __init__(self, name: str, inst: Optional[NetworkTableInstance] = None) -> None:
+    def __init__(self, name: str, inst: Optional[NetworkTableInstance] = None, sim: bool = False) -> None:
 
-        self.inst = inst or NetworkTableInstance.getDefault()  # self.inst = inst
-        # self.in/st
-        self.inst.getTopic("nodes")
+        self.inst = inst or NetworkTableInstance.getDefault()
 
-        nt = self.inst.getTable("Vision" + name)
+        nt = self.inst.getTable(name)
+        self.nodes_entry = nt.getEntry("nodes")
         self.true_entry = nt.getEntry("results_true")
         self.false_entry = nt.getEntry("results_false")
         self.timestamp_entry = nt.getEntry("timestamp")
@@ -44,7 +57,7 @@ class NTConnection(BaseConnection):
         self.debug_entry = nt.getEntry("debug_stream")
         self.debug_entry.setBoolean(False)
 
-        pose_table = self.inst.getTable("/SmartDashboard/Field")
+        pose_table = self.inst.getTable("SmartDashboard").getSubTable("Field")
         self.pose_entry = pose_table.getEntry("fused_pose")
 
         self.old_fps_time = 0.0
@@ -62,9 +75,16 @@ class NTConnection(BaseConnection):
 
         self.inst.flush()
 
-    def set_string_array(self, subtable_key: str, key: str, value: list[str]) -> None:
-        st = self.inst.getTable(subtable_key)
-        st.getEntry(key).setDefaultValue(value)
+    def set_nodes(self, value: List[str]) -> None:
+        self.nodes_entry.setStringArray(value)
+
+        current_time = self._get_time()
+        self.timestamp_entry.setDouble(current_time)
+        fps = 1 / ((current_time - self.old_fps_time) if (current_time - self.old_fps_time) != 0 else 1)
+        self.old_fps_time = current_time
+        self.fps_entry.setDouble(fps)
+
+        self.inst.flush()
 
     def get_latest_pose(self) -> Pose2d:
         arr = self.pose_entry.getDoubleArray([0, 0, 0])
@@ -99,7 +119,7 @@ class DummyConnection(BaseConnection):
 
     def get_debug(self) -> bool:
         return self.debug
-
-    def set_string_array(self, subtable_key: str, key: str, value: List[str]) -> None:
+    
+    def set_nodes(self, value: list[str]) -> None:
         self.string_array = value
-        print(f"Setting {subtable_key}/{key} to {value}")
+        print(f"Setting nodes to {value}")
