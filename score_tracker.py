@@ -2,6 +2,7 @@ import numpy as np
 import numpy.typing as npt
 import wpilib
 
+
 class ScoreTracker:
 
     CUBE_MASK = np.array(

@@ -2,24 +2,20 @@ import math
 import time
 from wpimath.geometry import Pose2d
 from ntcore import NetworkTableInstance
-from abc import ABC, abstractmethod, abstractproperty
-from typing import Optional, List, Any
-from cscore import CameraServer
-import cscore
+from abc import ABC, abstractmethod
+from typing import Optional
 
 
-RIO_IP = {
-    True: "127.0.0.1",
-    False: "10.47.74.2"  
-}
+RIO_IP = {True: "127.0.0.1", False: "10.47.74.2"}
+
 
 def nt_data_to_node_data(self, data: list[str]) -> list[tuple[int, bool]]:
-        nodes: list[tuple[int, bool]] = []
-        for node in data:
-            as_array = str(node)
-            a = (int(f"{as_array[0]}{as_array[1]}"), as_array[2] == "1")
-            nodes.append(a)
-        return nodes
+    nodes: list[tuple[int, bool]] = []
+    for node in data:
+        as_array = str(node)
+        a = (int(f"{as_array[0]}{as_array[1]}"), as_array[2] == "1")
+        nodes.append(a)
+    return nodes
 
 
 class BaseConnection(ABC):
@@ -43,7 +39,9 @@ class BaseConnection(ABC):
 class NTConnection(BaseConnection):
     inst: NetworkTableInstance
 
-    def __init__(self, name: str, inst: Optional[NetworkTableInstance] = None, sim: bool = False) -> None:
+    def __init__(
+        self, name: str, inst: Optional[NetworkTableInstance] = None, sim: bool = False
+    ) -> None:
 
         self.inst = inst or NetworkTableInstance.getDefault()
 
@@ -75,12 +73,16 @@ class NTConnection(BaseConnection):
 
         self.inst.flush()
 
-    def set_nodes(self, value: List[str]) -> None:
+    def set_nodes(self, value: list[str]) -> None:
         self.nodes_entry.setStringArray(value)
 
         current_time = self._get_time()
         self.timestamp_entry.setDouble(current_time)
-        fps = 1 / ((current_time - self.old_fps_time) if (current_time - self.old_fps_time) != 0 else 1)
+        fps = 1 / (
+            (current_time - self.old_fps_time)
+            if (current_time - self.old_fps_time) != 0
+            else 1
+        )
         self.old_fps_time = current_time
         self.fps_entry.setDouble(fps)
 
@@ -119,7 +121,7 @@ class DummyConnection(BaseConnection):
 
     def get_debug(self) -> bool:
         return self.debug
-    
+
     def set_nodes(self, value: list[str]) -> None:
         self.string_array = value
         print(f"Setting nodes to {value}")
