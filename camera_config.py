@@ -18,3 +18,9 @@ class CameraParams:
 
     def get_vertical_fov(self) -> float:
         return 2 * atan2(self.height / 2, self.K[1, 1])
+
+    def get_fx(self) -> float:
+        return self.K[0, 0]
+
+    def get_fy(self) -> float:
+        return self.K[1, 1]

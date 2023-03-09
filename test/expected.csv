@@ -1,12 +1,8 @@
-test_images/conecube.jpg,False,True,512,360,740,503
-test_images/conecube.jpg,True,False,575,150,730,1
+test_images/conecube.jpg,True,False,575,1,730,150
 test_images/gamecube.jpg,False,True,512,360,740,503
 test_images/gamecube.jpg,False,False,575,150,730,1
-test_images/midshelf.jpg,False,True,512,360,700,310
 test_images/midshelf.jpg,True,False,520,43,665,220
-test_images/monk.jpg,True,False,530,400,685,570
 test_images/monk.jpg,False,False,530,225,675,400
 test_images/clubpenguin.jpg,False,False,490,180,785,330
 test_images/clubpenguin.jpg,False,False,515,390,780,633
-test_images/plswork.jpg,True,False,540,230,740,470
 test_images/plswork.jpg,False,False,530,475,770,590

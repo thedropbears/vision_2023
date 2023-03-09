@@ -1,9 +1,6 @@
-# same version thats running on pi
-# https://github.com/wpilibsuite/WPILibPi/blob/36788aae0bdaaee27a540357d111f4adf07b3973/stage3/01-sys-tweaks/01-run.sh#L49
-# opencv install numpy as a dependancy
 --find-links https://tortall.net/~robotpy/wheels/2023/raspbian/
 opencv-python
 pytest
-pynetworktables
 robotpy-cscore
 robotpy-wpimath
+pynetworktables

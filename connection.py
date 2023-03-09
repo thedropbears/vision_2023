@@ -1,62 +1,127 @@
+import math
 import time
-
-from networktables import NetworkTablesInstance
-
-NetworkTables = NetworkTablesInstance.getDefault()
-
-RIO_IP = "10.47.74.2"
-UDP_RECV_PORT = 5005
-UDP_SEND_PORT = 5006
-
-Results = tuple[float, float, float]
+from wpimath.geometry import Pose2d
+from networktables import NetworkTablesInstance, NetworkTables
+from abc import ABC, abstractmethod
 
 
-class NTConnection:
-    def __init__(self, inst: NetworkTablesInstance = NetworkTables) -> None:
-        inst.initialize(server=RIO_IP)
+RIO_IP = {True: "127.0.0.1", False: "10.47.74.2"}
+
+
+def nt_data_to_node_data(self, data: list[str]) -> list[tuple[int, bool]]:
+    nodes: list[tuple[int, bool]] = []
+    for node in data:
+        as_array = str(node)
+        a = (int(f"{as_array[0]}{as_array[1]}"), as_array[2] == "1")
+        nodes.append(a)
+    return nodes
+
+
+class BaseConnection(ABC):
+    @abstractmethod
+    def send_results(self, positive: list[int], negatives: list[int]) -> None:
+        ...
+
+    @abstractmethod
+    def get_latest_pose(self) -> Pose2d:
+        ...
+
+    @abstractmethod
+    def get_debug(self) -> bool:
+        ...
+
+    @abstractmethod
+    def set_nodes(self, value: list[str]) -> None:
+        ...
+
+
+class NTConnection(BaseConnection):
+    inst: NetworkTablesInstance
+
+    def __init__(
+        self, name: str, inst: NetworkTablesInstance = NetworkTables, sim: bool = False
+    ) -> None:
+        inst.initialize(server=RIO_IP[sim])
         self.inst = inst
 
-        nt = inst.getTable("/vision")
-        self.entry = nt.getEntry("data")
-        self.ping = nt.getEntry("ping")
-        self.raspi_pong = nt.getEntry("raspi_pong")
-        self.rio_pong = nt.getEntry("rio_pong")
+        nt = self.inst.getTable(name)
+        self.nodes_entry = nt.getEntry("nodes")
+        self.true_entry = nt.getEntry("results_true")
+        self.false_entry = nt.getEntry("results_false")
+        self.timestamp_entry = nt.getEntry("timestamp")
         self.fps_entry = nt.getEntry("fps")
+        # wether to stream an annotated image back
+        self.debug_entry = nt.getEntry("debug_stream")
+        self.debug_entry.setBoolean(False)
+
+        pose_table = self.inst.getTable("SmartDashboard").getSubTable("Field")
+        self.pose_entry = pose_table.getEntry("fused_pose")
 
         self.old_fps_time = 0.0
-
-        self.last_ping_time = 0.0
-        self.time_to_pong = 0.00000001
         self._get_time = time.monotonic
 
-    def send_results(self, results: Results) -> None:
-        self.entry.setDoubleArray(results)
-        self.inst.flush()
+    def send_results(self, positives: list[int], negatives: list[int]) -> None:
+        # self.true_entry.setIntegerArray(positives)
+        # self.false_entry.setIntegerArray(negatives)
 
-    def pong(self) -> None:
-        self.ping_time = self.ping.getNumber(0)
-        if abs(self.ping_time - self.last_ping_time) > self.time_to_pong:
-            self.rio_pong.setNumber(self.ping_time)
-            self.raspi_pong.setNumber(self._get_time())
-            self.last_ping_time = self.ping_time
-
-    def set_fps(self) -> None:
-        current_time = time.monotonic()
+        current_time = self._get_time()
+        self.timestamp_entry.setDouble(current_time)
         fps = 1 / (current_time - self.old_fps_time)
         self.old_fps_time = current_time
         self.fps_entry.setDouble(fps)
 
+        self.inst.flush()
 
-class DummyConnection:
-    def __init__(self):
-        self.results = None
+    def set_nodes(self, value: list[str]) -> None:
+        self.nodes_entry.setStringArray(value)
 
-    def send_results(self, results: Results) -> None:
-        print("results being sent", results)
-        self.results = results
+        current_time = self._get_time()
+        self.timestamp_entry.setDouble(current_time)
+        fps = 1 / (
+            (current_time - self.old_fps_time)
+            if (current_time - self.old_fps_time) != 0
+            else 1
+        )
+        self.old_fps_time = current_time
+        self.fps_entry.setDouble(fps)
 
-    def pong(self) -> None:
-        pass
+        self.inst.flush()
 
-    def set_fps(self) -> None:
-        pass
+    def get_latest_pose(self) -> Pose2d:
+        arr: list[float] = self.pose_entry.getDoubleArray([0, 0, 0])  # type: ignore
+        print(arr)
+        return Pose2d(arr[0], arr[1], math.radians(arr[2]))
+
+    def get_debug(self) -> bool:
+        # return self.debug_entry.getBoolean(True)
+        return True
+
+
+zero_pose = Pose2d()
+
+
+class DummyConnection(BaseConnection):
+    def __init__(self, pose=zero_pose, do_print=False, do_annotate=False):
+        self.pose = pose
+        self.debug = do_annotate
+        self.results = [[], []]
+        self.string_array = []
+
+    def send_results(self, positives: list[int], negatives: list[int]) -> None:
+        self.results = [positives, negatives]
+        print(
+            "results being sent, positive sightings:",
+            positives,
+            ", negative signtings:",
+            negatives,
+        )
+
+    def get_latest_pose(self) -> Pose2d:
+        return self.pose
+
+    def get_debug(self) -> bool:
+        return self.debug
+
+    def set_nodes(self, value: list[str]) -> None:
+        self.string_array = value
+        print(f"Setting nodes to {value}")
