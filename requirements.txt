@@ -3,3 +3,4 @@ opencv-python
 pytest
 robotpy-cscore
 robotpy-wpimath
+pynetworktables

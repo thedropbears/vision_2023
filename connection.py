@@ -1,7 +1,7 @@
 import math
 import time
 from wpimath.geometry import Pose2d
-from ntcore import NetworkTableInstance
+from networktables import NetworkTablesInstance, NetworkTables
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -37,13 +37,13 @@ class BaseConnection(ABC):
 
 
 class NTConnection(BaseConnection):
-    inst: NetworkTableInstance
+    inst: NetworkTablesInstance
 
     def __init__(
-        self, name: str, inst: Optional[NetworkTableInstance] = None, sim: bool = False
+        self, name: str, inst: NetworkTablesInstance = NetworkTables, sim: bool = False
     ) -> None:
-
-        self.inst = inst or NetworkTableInstance.getDefault()
+        inst.initialize(server=RIO_IP[sim])
+        self.inst = inst
 
         nt = self.inst.getTable(name)
         self.nodes_entry = nt.getEntry("nodes")
@@ -62,8 +62,8 @@ class NTConnection(BaseConnection):
         self._get_time = time.monotonic
 
     def send_results(self, positives: list[int], negatives: list[int]) -> None:
-        self.true_entry.setDoubleArray(positives)
-        self.false_entry.setDoubleArray(negatives)
+        # self.true_entry.setIntegerArray(positives)
+        # self.false_entry.setIntegerArray(negatives)
 
         current_time = self._get_time()
         self.timestamp_entry.setDouble(current_time)
@@ -89,7 +89,8 @@ class NTConnection(BaseConnection):
         self.inst.flush()
 
     def get_latest_pose(self) -> Pose2d:
-        arr = self.pose_entry.getDoubleArray([0, 0, 0])
+        arr: list[float] = self.pose_entry.getDoubleArray([0, 0, 0]) # type: ignore
+        print(arr)
         return Pose2d(arr[0], arr[1], math.radians(arr[2]))
 
     def get_debug(self) -> bool:
