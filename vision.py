@@ -59,7 +59,6 @@ def is_coloured_game_piece(
     upper_colour: np.ndarray,
     bBox_area: int,
 ) -> bool:
-
     gamepiece_mask = cv2.inRange(masked_image, lower_colour, upper_colour)
 
     # get largest contour
@@ -80,7 +79,6 @@ def is_coloured_game_piece(
 def is_game_piece_present(
     frame: np.ndarray, bounding_box: BoundingBox, expected_game_piece: ExpectedGamePiece
 ) -> bool:
-
     # draw bound box mask
     bBox_mask = np.zeros_like(frame)
     bBox_mask = cv2.rectangle(
@@ -123,7 +121,6 @@ def is_game_piece_present(
 
 
 def process_image(frame: np.ndarray, pose: Pose2d):
-
     # visible_nodes = self.find_visible_nodes(frame, pose)
 
     # node_states = self.detect_node_state(frame, visible_nodes)
@@ -191,7 +188,6 @@ def is_node_region_in_image(
     camera_params: CameraParams,
     node_region: NodeRegion,
 ) -> bool:
-
     # create transform to make camera origin
     world_to_robot = Transform3d(Pose3d(), Pose3d(robot_pose))
     world_to_camera = world_to_robot + camera_params.transform
